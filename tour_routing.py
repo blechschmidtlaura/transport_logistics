@@ -43,7 +43,7 @@ def nearest_neighbor(hub_coord, vertices, demands, capacity, truck_co2, empty_tr
                     costs_2 += dist_matrix[current_node, hub_id] * empty_truck_weight  # Return trip emission
                 routes.append(route)  # Save the route
                 break  # Exit the inner while-loop to start a new route
-            route.append(nearest)
+            route.append(vertices[nearest])
             visited[nearest] = new_demand_after_visit
             current_capacity += new_load
             current_node = nearest
@@ -93,7 +93,7 @@ def sweep_nearest(hub_coord, vertices, demands, capacity, truck_co2, empty_truck
                     min_dist = dist_matrix[current_node, neighbor]
             if nearest is None:
                 break  # No more valid neighbors to visit
-            route.append(nearest)
+            route.append(vertices[nearest])  # append the coord of nearest neighbor
             visited[nearest] = True
             current_capacity += demands[nearest]
             current_node = nearest
@@ -122,10 +122,11 @@ def calculate_savings(dist_matrix: np.ndarray) -> List[Tuple[float, int, int]]:
     return savings
 
 
+"""
 # Clarke and Wright Savings Algorithm (Optimized for continuous routes)
 def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
                       empty_truck_weight: float):
-    """Clarke and Wright Savings Algorithm (Optimized for continuous routes)."""
+
     num_points = dist_matrix.shape[0]
     routes = [[i] for i in range(1, num_points)]  # Initial routes for each customer
     route_loads = {i: demands[i] for i in range(1, num_points)}  # Track route loads
@@ -174,13 +175,77 @@ def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int
 
     # Calculate emissions and finalize routes
     for route in routes:
-
         current_capacity = 0
         for i in range(0, len(route) - 1):
             current_capacity += demands[route[i + 1]]
             total_emission += truck_co2 * (current_capacity + empty_truck_weight) * dist_matrix[route[i], route[i + 1]]
         # Add return to depot
         total_emission += truck_co2 * empty_truck_weight * dist_matrix[route[len(route) - 1], 0]
+
+    total_emission = total_emission / 1000  # Convert grams to kilograms
+    return routes, total_emission
+"""
+
+
+def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
+                      empty_truck_weight: float, vertices: List[Tuple[float, float]]):
+    """Clarke and Wright Savings Algorithm (Optimized for continuous routes)."""
+    num_points = dist_matrix.shape[0]
+    # Initial routes for each customer, now storing coordinates
+    routes = [[vertices[i]] for i in range(1, num_points)]  # Initial routes for each customer
+    route_loads = {tuple(vertices[i]): demands[i] for i in range(1, num_points)}  # Track route loads by coordinates
+    total_emission = 0  # Emission tracking
+
+    # Calculate savings
+    savings = calculate_savings(dist_matrix)
+
+    # Merge routes based on savings
+    for saving, i, j in savings:
+        # Find the routes containing i and j (using coordinates instead of indices)
+        route_i = next((route for route in routes if vertices[i] in route), None)
+        route_j = next((route for route in routes if vertices[j] in route), None)
+
+        # Check if i and j are in different routes and merging is feasible
+        if route_i is None or route_j is None or route_i == route_j:
+            continue
+
+        # Check if the new merged route exceeds capacity
+        if route_loads[tuple(route_i[0])] + route_loads[tuple(route_j[0])] <= capacity:
+            # Merge the routes in a continuous sequence
+            if route_i[-1] == vertices[i] and route_j[0] == vertices[j]:  # Tail-to-head
+                route_i.extend(route_j)
+                routes.remove(route_j)
+
+            elif route_i[0] == vertices[i] and route_j[-1] == vertices[j]:  # Head-to-tail
+                route_j.extend(route_i)
+                routes.remove(route_i)
+
+            elif route_i[-1] == vertices[i] and route_j[-1] == vertices[j]:  # Tail-to-tail
+                route_i.extend(route_j[::-1])
+                routes.remove(route_j)
+
+            elif route_i[0] == vertices[i] and route_j[0] == vertices[j]:  # Head-to-head
+                route_j.reverse()
+                route_j.extend(route_i)
+
+            # Update route loads and remove merged route
+            route_loads[tuple(route_i[0])] += route_loads[tuple(route_j[0])]
+
+    # Ensure all customers are served (if any customer is unassigned, assign to a new route)
+    unassigned_customers = [i for i in range(1, num_points) if not any(vertices[i] in route for route in routes)]
+    for customer in unassigned_customers:
+        routes.append([vertices[customer]])
+
+    # Calculate emissions and finalize routes
+    for route in routes:
+        current_capacity = 0
+        for i in range(0, len(route) - 1):
+            # Get the coordinates of the points in the route
+            current_capacity += demands[vertices.index(route[i + 1])]
+            total_emission += truck_co2 * (current_capacity + empty_truck_weight) * dist_matrix[
+                vertices.index(route[i]), vertices.index(route[i + 1])]
+        # Add return to depot
+        total_emission += truck_co2 * empty_truck_weight * dist_matrix[vertices.index(route[len(route) - 1]), 0]
 
     total_emission = total_emission / 1000  # Convert grams to kilograms
     return routes, total_emission
@@ -194,10 +259,10 @@ def plot_tour_planning(vertices: List[Tuple[float, float]], routes: List[List[in
     # Plot routes
     for route in routes:
         # Add depot (node 0) to the beginning and end of the route
-        route_with_depot = [0] + route + [0]
+        route_with_depot = [vertices[0]] + route + [vertices[0]]
         for i in range(len(route_with_depot) - 1):
-            start = vertices[route_with_depot[i]]
-            end = vertices[route_with_depot[i + 1]]
+            start = route_with_depot[i]
+            end = route_with_depot[i + 1]
 
             # Draw the route with arrows
             plt.annotate("", xy=end, xytext=start,
@@ -249,7 +314,7 @@ if __name__ == '__main__':
         print(round(costs_sn, 3))
         plot_tour_planning(clients, routes_sn, "results/" + "SN_" + instance + ".png")
 
-        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_weight)
+        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_weight, clients)
         print("CW")
         print(round(total_emission, 3))
         plot_tour_planning(clients, routes_cw, "results/" + "CW_" + instance + ".png")

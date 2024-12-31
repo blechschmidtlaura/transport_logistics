@@ -14,9 +14,9 @@ def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2, 
             break
     for i in range(0, len(clients)):
         if clients[i] == hub_coord:
+            means_transport.append(-1)  # hub
             continue
         # condition for bike, <= 500kg, <= 6
-        route = [clients[i]]
         if demands[i] <= 500 and dist_matrix[hub_id][i] * 2 <= 6:  # take bike
             means_transport.append(0)
             continue
