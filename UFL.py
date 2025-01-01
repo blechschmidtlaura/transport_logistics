@@ -15,43 +15,40 @@ def index(elt, list):
     return -1  # Retourne -1 si l'élément n'est pas trouvé
 
 
-def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike):
+def best_distribution(candidat, candidats, clients, demands, assignements,nb_client_candidat, cost_client_car_bike):
     # Create copies of the current assignments and client counts for modification
-    nb_client_candidat_copy = nb_client_candidate.copy()
-    assignmentclients_candidate = assignments.copy()
-    saving_candidat = 0  # Initialize the CO2 savings for the current candidate
-    demands_candidat = 0  # Initialize the demand associated with the candidate
-    id1 = index(candidate, candidates)  # Get the index of the new refrigerator candidate
-    for j in range(len(clients)):
-        id = index(assignmentclients_candidate[j], candidates)  # Get the index of the current assignment for client j
+    nb_client_candidat_copy = nb_client_candidat.copy()
+    assignements_clients_candidat= assignements.copy()
+    saving_candidat = 0 # Initialize the CO2 savings for the current candidate
+    demands_candidat = 0 # Initialize the demand associated with the candidate
+    id1 = indexe(candidat,candidats)    # Get the index of the new refrigerator candidate
+    for j in range (len(clients)):
+        id =  indexe(assignements_clients_candidat[j],candidats)   # Get the index of the current assignment for client j
         # Check if assigning the client to the new candidate reduces CO2 emissions 
-        if cost_client_car_bike[id][j] > cost_client_car_bike[id1][j]:
-            saving_candidat += -cost_client_car_bike[id][j] + cost_client_car_bike[id1][j]
-            demands_candidat += demands[j]
-            assignmentclients_candidate[j] = candidate
-            nb_client_candidat_copy[id1] += 1
+        if  cost_client_car_bike[id][j]> cost_client_car_bike[id1][j] :
+            saving_candidat+=-cost_client_car_bike[id][j]+cost_client_car_bike[id1][j]
+            demands_candidat+= demands[j]
+            assignements_clients_candidat[j]=candidat
+            nb_client_candidat_copy[id1]+=1
             nb_client_candidat_copy[id] -= 1
         # If the CO2 emissions are the same, assign the client to the nearest candidate
-        if cost_client_car_bike[id][j] == cost_client_car_bike[id1][j] and distance(clients[j],
-                                                                                    candidates[id1]) < distance(
-            clients[j], candidates[id]):  # dist_matrix[j][id1] < dist_matrix[j][id]:
-            demands_candidat += demands[j]
-            assignmentclients_candidate[j] = candidate
-            nb_client_candidat_copy[id1] += 1
-            nb_client_candidat_copy[id] -= 1
+        if cost_client_car_bike[id][j] == cost_client_car_bike[id1][j] and distance(clients[j],candidats[id1]) < distance(clients[j],candidats[id]):
+            demands_candidat+= demands[j]
+            assignements_clients_candidat[j]=candidat
+            nb_client_candidat_copy[id1]+=1
+            nb_client_candidat_copy[id] -= 1 
 
-            # add the cost of freezing the demands of the clients assigned to the new candidat for one day
-    saving_candidat += demands_candidat * 0.042
+    # add the cost of freezing the demands of the clients assigned to the new candidat for one day and the production of the refrigerator
+    saving_candidat+= demands_candidat*0.042+1566.5 
 
-    # another idea wished_depots = 6 print("bebe",(len(clients) / wished_depots)) if min(elt for elt in
-    # nb_client_candidat_copy if elt > 0) > (len(clients) / wished_depots) and saving_candidat < 0:
-    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 5 and saving_candidat < 0:
-        # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
-        # than 5 clients to this candidate.
-        return saving_candidat, assignmentclients_candidate, nb_client_candidat_copy
+    #if min(elt for elt in nb_client_candidat_copy if elt > 0) > (len(clients) / wished_depots) and saving_candidat < 0:
+    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 7 and saving_candidat < 0:
+        # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more than 5 clients to this candidate.
+        return(saving_candidat, assignements_clients_candidat,nb_client_candidat_copy)
     else:
-        # We don't open the candidate and we have null saving
-        return 0, assignments, nb_client_candidate
+        # We don't open the candidat and we have null saving
+        return(0,assignements,nb_client_candidat)
+
 
 
 def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike):
@@ -117,19 +114,6 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
 
-def routes(nb_clients, client_assignments_idx, cost_client_car_bike, demands):
-    means_transport = [-1] * nb_clients
-    nb = 0
-    for i in range(0, nb_clients):
-        if cost_client_car_bike[client_assignments_idx[i]][i] == 0:
-            means_transport[i] = 0
-        else:
-            means_transport[i] = 1
-            if demands[i] > 1500:
-                nb += 1
-    return means_transport, nb
-
-
 def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
     """
     Trace les clients et entrepôts avec des flèches montrant les affectations.
@@ -168,106 +152,6 @@ def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
     else:
         plt.show()
 
-
-def plot_combined_routes_and_tours(depot: Tuple[float, float],
-                                   clients: List[Tuple[float, float]],
-                                   means_transport: List[List[int]],
-                                   vertices: List[Tuple[float, float]],
-                                   routes: List[int],
-                                   save_path=None):
-    """
-    Combines plotting of routes (bike and car) and tour planning.
-
-    :param depot: Coordinates of the depot (x, y).
-    :param clients: List of client coordinates [(x1, y1), (x2, y2), ...].
-    :param means_transport: List of lists indicating transport means for each hub (0 for bike, 1 for car).
-    :param vertices: List of vertices (depot and hubs) coordinates [(xd, yd), ...].
-    :param routes: List of hub indices in visiting order for the tour.
-    :param save_path: Path to save the plot as an image. If None, shows the plot.
-    """
-    plt.figure(figsize=(12, 10))
-
-    # Flags for labels to avoid duplicate legend entries
-    bike_route_added = False
-    car_route_added = False
-    bike_client_added = False
-    car_client_added = False
-    depot_added = False
-
-    # Plot bike and car routes from hubs to clients
-    for hub_idx, hub in enumerate(depot):
-        for client_idx, client in enumerate(clients[hub_idx]):
-            transport_modes = means_transport[hub_idx]
-            if transport_modes == []:  # No clients assigned to the hub
-                break
-            if transport_modes[client_idx] == 0:  # Bike route
-                if not bike_route_added:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='green', linestyle='--',
-                             label='Bike Route')
-                    bike_route_added = True
-                else:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='green', linestyle='--')
-
-                if not bike_client_added:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='green', label='Client (Bike)', s=100,
-                                edgecolor='black', zorder=2)
-                    bike_client_added = True
-                else:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='green', s=100, edgecolor='black',
-                                zorder=2)
-            elif transport_modes[client_idx] == 1:  # Car route
-                if not car_route_added:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='orange', linestyle='-',
-                             label='Car Route')
-                    car_route_added = True
-                else:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='orange', linestyle='-')
-
-                if not car_client_added:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='orange', label='Client (Car)', s=100,
-                                edgecolor='black', zorder=2)
-                    car_client_added = True
-                else:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='orange', s=100, edgecolor='black',
-                                zorder=2)
-
-    # Plot tour routes between hubs
-    for single_route in routes:
-        route_with_depot = [vertices[0]] + single_route + [vertices[0]]  # Include depot at start and end
-        for i in range(len(route_with_depot) - 1):
-            start = route_with_depot[i]
-            end = route_with_depot[i + 1]
-            plt.annotate("", xy=end, xytext=start,
-                         arrowprops=dict(arrowstyle="->", color='blue', lw=2, alpha=0.7))
-
-    for idx, vertex in enumerate(vertices):
-        plt.scatter(*vertex, color='orange', s=150 if idx == 0 else 100)
-        plt.text(vertex[0] + 0.1, vertex[1] + 0.1, str(idx), fontsize=10, color="black")
-
-    for hub in depot:
-        if not depot_added:
-            plt.scatter(vertices[hub][0], vertices[hub][1], color='blue', label='Depots', s=150)
-            depot_added = True
-        else:
-            plt.scatter(vertices[hub][0], vertices[hub][1], color='blue', s=150)
-
-    # Customize the plot
-    plt.xlabel("X Coordinate")
-    plt.ylabel("Y Coordinate")
-    plt.title("Combined Routes and Tour Planning")
-    plt.legend(loc='best')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.axis('equal')
-
-    # Save or show the plot
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
 
 
 # TODO: capacity of all cluster candidates less then overall capacity
