@@ -296,7 +296,7 @@ if __name__ == '__main__':
                 continue
             total_cost_of_cluster, transport_list = get_costs_star_scenario(clients[hub], coord_of_client,
                                                                             total_demand_list, car_capacity,
-                                                                            car_co2, empty_car_weight)
+                                                                            car_co2)
             cluster_transport_list.append(transport_list)
             costs_of_cluster.append(total_cost_of_cluster)
         # scenario 2_ routing through hubs
