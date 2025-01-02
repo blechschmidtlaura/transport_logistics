@@ -13,7 +13,7 @@ def index(elt, list):
     return -1  # Retourne -1 si l'élément n'est pas trouvé
 
 
-def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike):
+def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike, min_assigned_clients):
     # Create copies of the current assignments and client counts for modification
     nb_client_candidat_copy = nb_client_candidate.copy()
     assignmentclients_candidate = assignments.copy()
@@ -38,12 +38,10 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
             nb_client_candidat_copy[id1] += 1
             nb_client_candidat_copy[id] -= 1
 
-            # add the cost of freezing the demands of the clients assigned to the new candidat for one day
+            # add the cost of freezing the demands of the clients assigned to the new candidate for one day
     saving_candidat += demands_candidat * 0.042
 
-    # another idea wished_depots = 6 print("bebe",(len(clients) / wished_depots)) if min(elt for elt in
-    # nb_client_candidat_copy if elt > 0) > (len(clients) / wished_depots) and saving_candidat < 0:
-    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 5 and saving_candidat < 0:
+    if min(elt for elt in nb_client_candidat_copy if elt > 0) > min_assigned_clients and saving_candidat < 0:
         # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
         # than 5 clients to this candidate.
         return saving_candidat, assignmentclients_candidate, nb_client_candidat_copy
@@ -52,7 +50,7 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
         return 0, assignments, nb_client_candidate
 
 
-def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike):
+def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike, min_assigned_clients):
     nb_clients = len(clients)
     # Initially, all clients are assigned to the first candidate, which represents the main depot
     clients_assignments = [candidates[0]] * nb_clients
@@ -85,7 +83,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
             saving_cost[cand_temp], clients_assignment_matrix[cand_temp], nb_client_candidate_matrix[
                 cand_temp] = best_distribution(
                 candidates_temporary[cand_temp], candidates, clients, demands, clients_assignment_matrix[cand_temp],
-                nb_client_candidate_matrix[cand_temp], cost_client_car_bike)
+                nb_client_candidate_matrix[cand_temp], cost_client_car_bike, min_assigned_clients)
 
             # Find the candidate with the best saving cost
         smallest_saving_cost = min(saving_cost)
@@ -180,7 +178,7 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
     for hub_idx, hub in enumerate(depot):
         for client_idx, client in enumerate(clients[hub_idx]):
             transport_modes = means_transport[hub_idx]
-            if transport_modes == []:  # No clients assigned to the hub
+            if not transport_modes:  # No clients assigned to the hub
                 break
             if transport_modes[client_idx] == 0:  # Bike route
                 if not bike_route_added:
