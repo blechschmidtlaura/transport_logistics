@@ -8,7 +8,7 @@ def index(elt, list):
     for i in range(len(list)):
         if list[i] == elt:
             return i
-    return -1  # Retourne -1 si l'élément n'est pas trouvé
+    return -1  
 
 
 def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike, min_assigned_clients):
@@ -177,13 +177,13 @@ if __name__ == "__main__":
         # Compute costs for car and bike transportation
         cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
         # Apply the greedy heuristic algorithm with demand
-        total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(
-            candidats, clients, demands, cost_client_car_bike
+        total_cost, open_candidates, clients_assignments, client_assignments_idx = greedy_heuristic_with_demand(
+            candidats, clients, demands, cost_client_car_bike,5
         )
 
         #print("customer_assignments:", clients_assignments)
-        #print("client_assignements_idx:", client_assignements_idx)
-        #print("candidats_ouvert:", candidats_ouvert)
+        #print("client_assignments_idx:", client_assignments_idx)
+        #print("open_candidates:", open_candidates)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
 
@@ -204,20 +204,20 @@ if __name__ == "__main__":
         demands = demands[1:]  # Remove the depot demand
         selected_points, groups = split_and_select(clients)
         total_cost = [0, 0, 0, 0]
-        candidats_ouvert = [[], [], [], []]
+        open_candidates = [[], [], [], []]
         clients_assignments = [None, None, None, None]
-        client_assignements_idx = [None, None, None, None]
+        client_assignments_idx = [None, None, None, None]
         for i in range(1, 5):  # Parcourir les clés de 1 à 4
             clients = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
             candidats = selected_points[i]
             dist_matrix = distance_matrix(clients, candidats)
             cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-            total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[
+            total_cost[i - 1], open_candidates[i - 1], clients_assignments[i - 1], client_assignments_idx[
                 i - 1] = greedy_heuristic_with_demand(
-                candidats, clients, demands, cost_client_car_bike)
+                candidats, clients, demands, cost_client_car_bike,5)
         # print("customer_assignments_per_grp", clients_assignments)
-        # print("client_assignements_idx_per_grp",client_assignements_idx)
-        # print("candidats_ouvert_per_grp", candidats_ouvert)
+        # print("client_assignments_idx_per_grp",client_assignments_idx)
+        # print("open_candidates_per_grp", open_candidates)
         # print("total cost_per_grp",total_cost)
         print("total cost", sum(total_cost))
         clients = groups[1]+groups[2]+groups[3]+groups[4]
