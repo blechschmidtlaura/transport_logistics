@@ -85,14 +85,14 @@ def split_and_select(points):
             groups[3].append((x, y))
         else:
             groups[4].append((x, y))
-
+    random.seed(44)
     # Sélectionner aléatoirement 10 points dans chaque groupe
     selected_points = {
-        group_id: random.sample(group_points, min(len(group_points), 10))
+        group_id: random.sample(group_points, min(len(group_points), 50))
         for group_id, group_points in groups.items()
     }
 
-    return selected_points
+    return selected_points, groups
 
 
 def distance_matrix(clients, candidats):
