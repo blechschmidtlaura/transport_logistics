@@ -6,8 +6,13 @@ from matplotlib import pyplot as plt
 from data import collect_infos_from_instance
 from utils import prepare_clients_to_plot, calculate_distance_matrix, get_hub_id
 
+"""
+nearest neighbor heuristic with optional sweep phase (boolean sweep is true or false)
+"""
 
-def nearest_neighbor(hub_coord, vertices, demands, capacity, truck_co2, empty_truck_weight):
+
+def nearest_neighbor(hub_coord, vertices, client_demands, capacity, truck_co2, empty_truck_weight, sweep):
+    demands = client_demands.copy()
     hub_id = get_hub_id(hub_coord, vertices)
     dist_matrix = calculate_distance_matrix(vertices)
     num_points = dist_matrix.shape[0]
@@ -15,6 +20,7 @@ def nearest_neighbor(hub_coord, vertices, demands, capacity, truck_co2, empty_tr
     routes = []
     costs_2 = 0
     visited[hub_id] = 0  # visited -> 0
+
     while demands.count(0) < num_points:
         current_node = hub_id  # start at hub
         current_capacity = 0
@@ -24,8 +30,13 @@ def nearest_neighbor(hub_coord, vertices, demands, capacity, truck_co2, empty_tr
             min_dist = float('inf')  # at first largest value
             new_demand_after_visit = 0
             new_load = 0
-            for neighbor in [idx for idx, value in enumerate(visited) if
-                             value > 0]:  # go through all neighbors not visited yet
+            neighbor_candidates = [idx for idx, value in enumerate(visited) if value > 0]  # all clients
+            if sweep:
+                # Calculate polar angles and sort points by angle
+                polar_angles = calculate_polar_angles(vertices)
+                sorted_indices = np.argsort(polar_angles)
+                neighbor_candidates = [i for i in sorted_indices if visited[i] > 0]  # Sweep phase, not visited = 0
+            for neighbor in neighbor_candidates:  # depends on sweep boolean if sorted or not
                 if dist_matrix[current_node, neighbor] < min_dist:
                     nearest = neighbor
                     new_load = demands[nearest]
@@ -61,52 +72,6 @@ def calculate_polar_angles(vertices):
     return angles
 
 
-def sweep_nearest(hub_coord, vertices, demands, capacity, truck_co2, empty_truck_weight):
-    """Combination of sweep algorithm and nearest neighbor search"""
-    dist_matrix = calculate_distance_matrix(vertices)
-    hub_id = get_hub_id(hub_coord, vertices)
-    num_points = dist_matrix.shape[0]
-    visited = np.zeros(num_points, dtype=bool)
-    visited[hub_id] = True  # Mark the depot as visited
-    routes = []
-    total_emission = 0
-
-    # Calculate polar angles and sort points by angle
-    polar_angles = calculate_polar_angles(vertices)
-    sorted_indices = np.argsort(polar_angles)
-
-    while np.sum(visited) < num_points:
-        current_node = 0  # Start at depot
-        current_capacity = 0
-        route = []
-        sorted_remaining = [i for i in sorted_indices if not visited[i]]  # Sweep phase
-
-        while True:
-            nearest = None
-            min_dist = float('inf')
-            # Nearest neighbor search within sorted points
-            for neighbor in sorted_remaining:
-                if visited[neighbor]:
-                    continue
-                if demands[neighbor] + current_capacity <= capacity and dist_matrix[current_node, neighbor] < min_dist:
-                    nearest = neighbor
-                    min_dist = dist_matrix[current_node, neighbor]
-            if nearest is None:
-                break  # No more valid neighbors to visit
-            route.append(vertices[nearest])  # append the coord of nearest neighbor
-            visited[nearest] = True
-            current_capacity += demands[nearest]
-            current_node = nearest
-            # Calculate emissions
-            total_emission += truck_co2 * (current_capacity + empty_truck_weight) * min_dist  # CO2 for loaded truck
-        # Return to depot
-        if route:
-            total_emission += dist_matrix[current_node, hub_id] * empty_truck_weight  # Empty truck return emissions
-        routes.append(route)
-    total_emission = total_emission / 1000
-    return routes, total_emission
-
-
 # Function to calculate savings
 def calculate_savings(dist_matrix: np.ndarray) -> List[Tuple[float, int, int]]:
     """Calculate savings for merging routes."""
@@ -120,6 +85,7 @@ def calculate_savings(dist_matrix: np.ndarray) -> List[Tuple[float, int, int]]:
     # Sort savings in descending order
     savings.sort(reverse=True, key=lambda x: x[0])
     return savings
+
 
 def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
                       empty_truck_weight: float, vertices: List[Tuple[float, float]]):
@@ -237,18 +203,21 @@ if __name__ == '__main__':
         dist_matrix = calculate_distance_matrix(clients)
 
         # route with nearest neighbor heuristic
-        routes, costs_nn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight)
+        routes, costs_nn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight,
+                                            False)
         print(instance + ": ")
         print("NN:")
         print(round(costs_nn, 3))
         plot_tour_planning(clients, routes, "results/" + "NN_" + instance + ".png")
 
-        routes_sn, costs_sn = sweep_nearest(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight)
+        routes_sn, costs_sn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight,
+                                             True)
         print("SN")
         print(round(costs_sn, 3))
         plot_tour_planning(clients, routes_sn, "results/" + "SN_" + instance + ".png")
 
-        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_weight, clients)
+        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_weight,
+                                                      clients)
         print("CW")
         print(round(total_emission, 3))
         plot_tour_planning(clients, routes_cw, "results/" + "CW_" + instance + ".png")
