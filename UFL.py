@@ -3,12 +3,10 @@ from typing import Tuple, List
 from matplotlib import pyplot as plt
 
 from data import collect_infos_from_instance
-from star_scenario import get_costs_star_scenario
-from tour_routing import nearest_neighbor, sweep_nearest
-from utils import get_costs_car_bike, distance, prepare_clients_to_plot, calculate_distance_matrix
+from utils import get_costs_car_bike, distance,distance_matrix, split_and_select
 
 
-def index(elt, list):
+def indexe(elt, list):
     for i in range(len(list)):
         if list[i] == elt:
             return i
@@ -39,10 +37,9 @@ def best_distribution(candidat, candidats, clients, demands, assignements,nb_cli
             nb_client_candidat_copy[id] -= 1 
 
     # add the cost of freezing the demands of the clients assigned to the new candidat for one day and the production of the refrigerator
-    saving_candidat+= demands_candidat*0.042+1566.5 
+    saving_candidat+= demands_candidat*0.042+ 1566.5 
 
-    #if min(elt for elt in nb_client_candidat_copy if elt > 0) > (len(clients) / wished_depots) and saving_candidat < 0:
-    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 7 and saving_candidat < 0:
+    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 3 and saving_candidat < 0:
         # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more than 5 clients to this candidate.
         return(saving_candidat, assignements_clients_candidat,nb_client_candidat_copy)
     else:
@@ -95,7 +92,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
             big_saving.append(smallest_saving_cost)
             # Select the candidate with the greatest savings
             candidate_elected = candidates_temporary[id_smallest_saving_cost]
-            id_candidate_elected_candidates = index(candidate_elected, candidates)
+            id_candidate_elected_candidates = indexe(candidate_elected, candidates)
 
             # Mark the selected candidate as open
             candidates_open[id_candidate_elected_candidates] = 1
@@ -110,7 +107,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
 
     # Calculate the total cost, accounting for all realized savings
     total_cost = sum(big_saving) + total_cost
-    client_assignments_idx = [index(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
+    client_assignments_idx = [indexe(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
 
@@ -242,122 +239,79 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
     else:
         plt.show()
 
-# TODO: capacity of all cluster candidates less then overall capacity
-if __name__ == '__main__':
-    number_instances = 12
+
+
+if __name__ == "__main__":
     car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
     bike_capacity = 100
     empty_car_weight = 15000  # in kg
     truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
     empty_truck_weight = 30000  # 3t per truck
-
-    for i in range(1, number_instances + 1):
-        instance = ""
+    ##Loop through instances "01" to "10"
+    for i in range(1, 11):
+        instance =""
         if i < 10:
             instance += "0"
         instance += str(i)
         print(instance + ": ")
-        dimension, capacity, indices, vertices, demands = collect_infos_from_instance(
+        dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)  # prepare instance# vertices without routes
-        prepare_clients_to_plot(vertices)
-        dist_matrix = calculate_distance_matrix(vertices)
-        candidates = vertices  # clients + hub
-        hub = vertices[0]
-        clients = vertices[1:]
-        demands = demands[1:]
-        cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
-        total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
-            candidates, clients, demands, cost_client_car_bike)
-        # 1: [0,1,0,1,..], 1=hub
-        # 2: [in cluster of hub idx, in cluster of hub idx, ...]
-
-        # scenario 1: calculate demands of each hub: sum of all demands in cluster
-        demands_of_cluster = []
-        demands_of_cluster_as_list = []
-        costs_of_cluster = []
-        clusters = []
-        hub_ids = [idx for idx, value in enumerate(open_candidates) if value == 1]
-        cluster_transport_list = []
-        for hub in hub_ids:
-            transport_list = []
-            client_in_cluster = [idx for idx, value in enumerate(client_assignments_idx) if hub == value]
-            clusters.append(client_in_cluster)
-            total_demand = demands[hub]  # need this for scenario 2 as demands of each hub + hub itself
-            total_demand_list = []
-            for client in client_in_cluster:
-                total_demand += demands[client]
-                total_demand_list.append(demands[client])
-            demands_of_cluster.append(total_demand)
-            demands_of_cluster_as_list.append(total_demand_list)
-            coord_of_client = [clients[idx] for idx in client_in_cluster]
-            if len(coord_of_client) <= 1:  # no costs at all
-                costs_of_cluster.append(0.0)
-                continue
-            total_cost_of_cluster, transport_list = get_costs_star_scenario(clients[hub], coord_of_client,
-                                                                            total_demand_list, car_capacity,
-                                                                            car_co2)
-            cluster_transport_list.append(transport_list)
-            costs_of_cluster.append(total_cost_of_cluster)
-        # scenario 2_ routing through hubs
-        coord_of_hubs = [candidates[idx] for idx in hub_ids]
-        route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity, truck_co2,
-                                             empty_truck_weight)
-        route2, tour_costs2 = sweep_nearest(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity, truck_co2,
-                                            empty_truck_weight)
-        summed_costs = 0
-        for cluster_costs in costs_of_cluster:
-            summed_costs += cluster_costs
-        summed_costs += tour_costs
-        print(round(summed_costs, 3))
-        plot_clients_refrigerator(clients, candidates, client_assign,
-                                  save_path="results/" + "ufl_refr_" + instance + ".png")
-        # plot_combined(clients, candidates, client_assign, candidates, route, save_path="results/" + "ufl_route_" + instance + ".png")
-        plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route,
-                                       save_path="results/" + "ufl_tour_" + instance + ".png")
-
-"""
-if __name__ == "__main__":
-    dimension, capacity, indices, clients, demands = collect_infos_from_instance("09.txt")
-    candidates = clients
-    depot = clients[0]
-    clients = clients[1:]
-    demands = demands[1:]
-    dist_matrix = distance_matrix(clients, candidates)
-    cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
-    total_cost, candidates_open, clients_assignments, client_assign_idx = greedy_heuristic_with_demand(candidates,
-                                                                                                       clients,
-                                                                                                       demands,
-                                                                                                       cost_client_car_bike)
-    print("customer_assignments", clients_assignments)
-    print("client_assignements_idx", client_assign_idx)
-    print("candidats_ouvert", candidates_open)
-    print("total cost", total_cost)
-    print("initial cost", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
-    # plot_clients_refrigerateur(clients, candidats, clients_assignments)
-    nb_clients = len(clients)
-    print("routes, nb ", routes(nb_clients, client_assign_idx, cost_client_car_bike, demands))
-    # groups = split_and_select(clients)
-    # total_cost = [0, 0, 0, 0]
-    # candidats_ouvert = [[], [], [], []]
-    # clients_assignments = [[], [], [], []]
-    # client_assignements_idx = [[], [], [], []]
-    #
-    # for i in range(1, 5):  # Parcourir les clés de 1 à 4
-    #    candidats = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
-    #    dist_matrix = distance_matrix(clients, candidats)
-    #    cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-    #    
-    #    total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[i - 1] = greedy_heuristic_with_demand(
-    #        candidats, clients, demands, cost_client_car_bike)
-    # candidats = [sorted(set(sous_liste), key=sous_liste.index) for sous_liste in clients_assignments]
-
-    # candidats= [depot] + groups[1]
-    # dist_matrix = distance_matrix(clients, candidats)
-    # cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-    # total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(candidats, clients, demands,cost_client_car_bike)
-    # print("customer_assignments", clients_assignments)
-    # print("client_assignements_idx",client_assignements_idx)
-    # print("candidats_ouvert", candidats_ouvert)
-    # print("total cost",total_cost)
-"""
+    # Initialize variables
+        candidats = clients  # All clients are candidates initially
+        depot = clients[0]  # The depot is the first client
+        clients = clients[1:]  # Remove the depot from the clients list
+        demands = demands[1:]  # Remove the depot demand
+    
+        # Compute the distance matrix
+        dist_matrix = distance_matrix(clients, candidats)
+    
+        # Compute costs for car and bike transportation
+        cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
+    
+        # Apply the greedy heuristic algorithm with demand
+        total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(
+            candidats, clients, demands, cost_client_car_bike
+        )
+    
+        Print results for the current instance
+        print(f"Processing instance {instance_number}")
+        print("customer_assignments:", clients_assignments)
+        print("client_assignements_idx:", client_assignements_idx)
+        print("candidats_ouvert:", candidats_ouvert)
+        print("total cost:", total_cost)
+        print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
+    
+        # Plot the clients and candidates for the current instance
+        #plot_clients_refrigerateur(clients, candidats, clients_assignments)
+    
+        print(f"Completed instance {instance}\n")
+    
+#resolution instance 11,1
+    for i in range(11, 13) :
+        instance= str(i)
+        dimension, capacity, indices, clients, demands = collect_infos_from_instance(
+            instance)
+        # Initialize variables
+        candidats = clients  # All clients are candidates initially
+        depot = clients[0]  # The depot is the first client
+        clients = clients[1:]  # Remove the depot from the clients list
+        demands = demands[1:]  # Remove the depot demand
+        selected_points, groups = split_and_select(clients)
+        total_cost = [0, 0, 0, 0]
+        candidats_ouvert = [[], [], [], []]
+        clients_assignments = [None,None,None,None]
+        client_assignements_idx = [None,None,None,None]
+        for i in range(1, 5):  # Parcourir les clés de 1 à 4
+            clients = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
+            candidats = selected_points[i]
+            dist_matrix =  distance_matrix(clients, candidats)
+            cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
+            total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[i - 1] = greedy_heuristic_with_demand(
+                candidats, clients, demands, cost_client_car_bike)
+        #print("customer_assignments_per_grp", clients_assignments)
+        #print("client_assignements_idx_per_grp",client_assignements_idx)
+        #print("candidats_ouvert_per_grp", candidats_ouvert)
+        #print("total cost_per_grp",total_cost)
+        print("total cost",sum(total_cost))
+        print(f"Completed instance {instance}\n")
