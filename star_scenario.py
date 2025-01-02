@@ -1,10 +1,10 @@
 from data import collect_infos_from_instance
-from utils import calculate_distance_matrix
+from utils import distance
 import matplotlib.pyplot as plt
 
 
 def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
-    dist = [distance((hub_coord, clients[j]) for j in range(len(clients))]
+    dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
     co2_cost = 0
     means_transport = []
     for j in range (len(clients)): 
@@ -17,8 +17,8 @@ def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
                 means_transport.append(1)
                 total_load= demands[j]
                 while total_load > 0:
-                    load = min(demands[j], capacity) # if the truck can not carry all demands -> multiple routes to the same client
-                    co2_cost += co2_car_emission * load * dist[j]+ 0.2*2*dist[j]
+                    load = min(demands[j], car_capacity) # if the truck can not carry all demands -> multiple routes to the same client
+                    co2_cost += car_co2 * load * dist[j]+ 0.2*2*dist[j]
                     total_load -= load  # reeduce the remaining demand
     return co2_cost, means_transport
 
@@ -101,4 +101,6 @@ if __name__ == "__main__":
         print(round(costs, 3))
         print("number_bikes", mean_transport.count(0))
         print("number_cars", mean_transport.count(1))
-        plot_routes(clients[0], clients[1:], mean_transport, save_path="results/star_scenario_" + instance + ".png")
+        plot_routes(clients[0], clients[1:], mean_transport)
+
+        
