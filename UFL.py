@@ -3,49 +3,53 @@ from typing import Tuple, List
 from matplotlib import pyplot as plt
 
 from data import collect_infos_from_instance
-from utils import get_costs_car_bike, distance,distance_matrix, split_and_select
+from utils import get_costs_car_bike, distance, distance_matrix, split_and_select
 
 
-def indexe(elt, list):
+def index(elt, list):
     for i in range(len(list)):
         if list[i] == elt:
             return i
     return -1  # Retourne -1 si l'élément n'est pas trouvé
 
 
-def best_distribution(candidat, candidats, clients, demands, assignements,nb_client_candidat, cost_client_car_bike):
+def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike):
     # Create copies of the current assignments and client counts for modification
-    nb_client_candidat_copy = nb_client_candidat.copy()
-    assignements_clients_candidat= assignements.copy()
-    saving_candidat = 0 # Initialize the CO2 savings for the current candidate
-    demands_candidat = 0 # Initialize the demand associated with the candidate
-    id1 = indexe(candidat,candidats)    # Get the index of the new refrigerator candidate
-    for j in range (len(clients)):
-        id =  indexe(assignements_clients_candidat[j],candidats)   # Get the index of the current assignment for client j
-        # Check if assigning the client to the new candidate reduces CO2 emissions 
-        if  cost_client_car_bike[id][j]> cost_client_car_bike[id1][j] :
-            saving_candidat+=-cost_client_car_bike[id][j]+cost_client_car_bike[id1][j]
-            demands_candidat+= demands[j]
-            assignements_clients_candidat[j]=candidat
-            nb_client_candidat_copy[id1]+=1
+    nb_client_candidat_copy = nb_client_candidate.copy()
+    assignmentclients_candidate = assignments.copy()
+    saving_candidat = 0  # Initialize the CO2 savings for the current candidate
+    demands_candidat = 0  # Initialize the demand associated with the candidate
+    id1 = index(candidate, candidates)  # Get the index of the new refrigerator candidate
+    for j in range(len(clients)):
+        id = index(assignmentclients_candidate[j], candidates)  # Get the index of the current assignment for client j
+        # Check if assigning the client to the new candidate reduces CO2 emissions
+        if cost_client_car_bike[id][j] > cost_client_car_bike[id1][j]:
+            saving_candidat += -cost_client_car_bike[id][j] + cost_client_car_bike[id1][j]
+            demands_candidat += demands[j]
+            assignmentclients_candidate[j] = candidate
+            nb_client_candidat_copy[id1] += 1
             nb_client_candidat_copy[id] -= 1
         # If the CO2 emissions are the same, assign the client to the nearest candidate
-        if cost_client_car_bike[id][j] == cost_client_car_bike[id1][j] and distance(clients[j],candidats[id1]) < distance(clients[j],candidats[id]):
-            demands_candidat+= demands[j]
-            assignements_clients_candidat[j]=candidat
-            nb_client_candidat_copy[id1]+=1
-            nb_client_candidat_copy[id] -= 1 
+        if cost_client_car_bike[id][j] == cost_client_car_bike[id1][j] and distance(clients[j],
+                                                                                    candidates[id1]) < distance(
+            clients[j], candidates[id]):  # dist_matrix[j][id1] < dist_matrix[j][id]:
+            demands_candidat += demands[j]
+            assignmentclients_candidate[j] = candidate
+            nb_client_candidat_copy[id1] += 1
+            nb_client_candidat_copy[id] -= 1
 
-    # add the cost of freezing the demands of the clients assigned to the new candidat for one day and the production of the refrigerator
-    saving_candidat+= demands_candidat*0.042+ 1566.5 
+            # add the cost of freezing the demands of the clients assigned to the new candidat for one day
+    saving_candidat += demands_candidat * 0.042
 
-    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 3 and saving_candidat < 0:
-        # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more than 5 clients to this candidate.
-        return(saving_candidat, assignements_clients_candidat,nb_client_candidat_copy)
+    # another idea wished_depots = 6 print("bebe",(len(clients) / wished_depots)) if min(elt for elt in
+    # nb_client_candidat_copy if elt > 0) > (len(clients) / wished_depots) and saving_candidat < 0:
+    if min(elt for elt in nb_client_candidat_copy if elt > 0) > 5 and saving_candidat < 0:
+        # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
+        # than 5 clients to this candidate.
+        return saving_candidat, assignmentclients_candidate, nb_client_candidat_copy
     else:
-        # We don't open the candidat and we have null saving
-        return(0,assignements,nb_client_candidat)
-
+        # We don't open the candidate and we have null saving
+        return 0, assignments, nb_client_candidate
 
 
 def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike):
@@ -92,7 +96,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
             big_saving.append(smallest_saving_cost)
             # Select the candidate with the greatest savings
             candidate_elected = candidates_temporary[id_smallest_saving_cost]
-            id_candidate_elected_candidates = indexe(candidate_elected, candidates)
+            id_candidate_elected_candidates = index(candidate_elected, candidates)
 
             # Mark the selected candidate as open
             candidates_open[id_candidate_elected_candidates] = 1
@@ -107,7 +111,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
 
     # Calculate the total cost, accounting for all realized savings
     total_cost = sum(big_saving) + total_cost
-    client_assignments_idx = [indexe(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
+    client_assignments_idx = [index(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
 
@@ -148,6 +152,7 @@ def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
         plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
     else:
         plt.show()
+
 
 def plot_combined_routes_and_tours(depot: Tuple[float, float],
                                    clients: List[Tuple[float, float]],
@@ -240,7 +245,6 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
         plt.show()
 
 
-
 if __name__ == "__main__":
     car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
@@ -250,46 +254,44 @@ if __name__ == "__main__":
     empty_truck_weight = 30000  # 3t per truck
     ##Loop through instances "01" to "10"
     for i in range(1, 11):
-        instance =""
+        instance = ""
         if i < 10:
             instance += "0"
         instance += str(i)
         print(instance + ": ")
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)  # prepare instance# vertices without routes
-    # Initialize variables
+        # Initialize variables
         candidats = clients  # All clients are candidates initially
         depot = clients[0]  # The depot is the first client
         clients = clients[1:]  # Remove the depot from the clients list
         demands = demands[1:]  # Remove the depot demand
-    
+
         # Compute the distance matrix
         dist_matrix = distance_matrix(clients, candidats)
-    
+
         # Compute costs for car and bike transportation
         cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-    
+
         # Apply the greedy heuristic algorithm with demand
         total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(
             candidats, clients, demands, cost_client_car_bike
         )
-    
-        Print results for the current instance
-        print(f"Processing instance {instance_number}")
+
         print("customer_assignments:", clients_assignments)
         print("client_assignements_idx:", client_assignements_idx)
         print("candidats_ouvert:", candidats_ouvert)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
-    
+
         # Plot the clients and candidates for the current instance
-        #plot_clients_refrigerateur(clients, candidats, clients_assignments)
-    
+        # plot_clients_refrigerateur(clients, candidats, clients_assignments)
+
         print(f"Completed instance {instance}\n")
-    
-#resolution instance 11,1
-    for i in range(11, 13) :
-        instance= str(i)
+
+    # resolution instance 11,1
+    for i in range(11, 13):
+        instance = str(i)
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)
         # Initialize variables
@@ -300,18 +302,19 @@ if __name__ == "__main__":
         selected_points, groups = split_and_select(clients)
         total_cost = [0, 0, 0, 0]
         candidats_ouvert = [[], [], [], []]
-        clients_assignments = [None,None,None,None]
-        client_assignements_idx = [None,None,None,None]
+        clients_assignments = [None, None, None, None]
+        client_assignements_idx = [None, None, None, None]
         for i in range(1, 5):  # Parcourir les clés de 1 à 4
             clients = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
             candidats = selected_points[i]
-            dist_matrix =  distance_matrix(clients, candidats)
+            dist_matrix = distance_matrix(clients, candidats)
             cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-            total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[i - 1] = greedy_heuristic_with_demand(
+            total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[
+                i - 1] = greedy_heuristic_with_demand(
                 candidats, clients, demands, cost_client_car_bike)
-        #print("customer_assignments_per_grp", clients_assignments)
-        #print("client_assignements_idx_per_grp",client_assignements_idx)
-        #print("candidats_ouvert_per_grp", candidats_ouvert)
-        #print("total cost_per_grp",total_cost)
-        print("total cost",sum(total_cost))
+        # print("customer_assignments_per_grp", clients_assignments)
+        # print("client_assignements_idx_per_grp",client_assignements_idx)
+        # print("candidats_ouvert_per_grp", candidats_ouvert)
+        # print("total cost_per_grp",total_cost)
+        print("total cost", sum(total_cost))
         print(f"Completed instance {instance}\n")

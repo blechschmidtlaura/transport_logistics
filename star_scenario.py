@@ -1,27 +1,35 @@
 from data import collect_infos_from_instance
-from utils import distance
+from utils import calculate_distance_matrix
 import matplotlib.pyplot as plt
 
-
-def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
-    dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
-    co2_cost = 0
-    means_transport = []
-    for j in range (len(clients)): 
-        #condition for bike, <= 500kg, <= 6
-            if demands[j] <= 500 and dist[j] * 2 <= 6: # take bike
-            #bike_routes.append(route)
-                means_transport.append(0)
-                continue
-            else: #take car
-                means_transport.append(1)
-                total_load= demands[j]
-                while total_load > 0:
-                    load = min(demands[j], car_capacity) # if the truck can not carry all demands -> multiple routes to the same client
-                    co2_cost += car_co2 * load * dist[j]+ 0.2*2*dist[j]
-                    total_load -= load  # reeduce the remaining demand
-    return co2_cost, means_transport
-
+def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2, empty_car_weight):
+    means_transport = []  # 0 for bike, 1 for car
+    dist_matrix = calculate_distance_matrix(clients)
+    total_costs = 0
+    hub_id = 0
+    for id in range(0, len(clients)):
+        if hub_coord == clients[id]:
+            hub_id = id
+            break
+    for i in range(0, len(clients)):
+        if clients[i] == hub_coord:
+            means_transport.append(-1)  # hub
+            continue
+        # condition for bike, <= 500kg, <= 6
+        if demands[i] <= 500 and dist_matrix[hub_id][i] * 2 <= 6:  # take bike
+            means_transport.append(0)
+            continue
+        else:  # take the car
+            total_load = demands[i]
+            while total_load > 0:
+                load = min(total_load,
+                           car_capacity)  # if the truck can not carry all demands -> multiple routes to the same client
+                total_costs += car_co2 * (load + empty_car_weight) * dist_matrix[hub_id][i]
+                total_costs += car_co2 * empty_car_weight * dist_matrix[i][hub_id]  # emissions to return to depot
+                total_load -= load  # reduce the remaining demand
+            means_transport.append(1)
+    total_costs = total_costs / 1000
+    return total_costs, means_transport
 
 def plot_routes(depot, clients, means_transport, save_path=None):
     """
@@ -74,7 +82,7 @@ def plot_routes(depot, clients, means_transport, save_path=None):
     # Adding labels, legend, and grid
     plt.xlabel("X Coordinate")
     plt.ylabel("Y Coordinate")
-    plt.title("Routes Visualization", )
+    plt.title("Star Variant Visualization", )
     plt.legend(loc='best')
     plt.grid(True, linestyle='--', alpha=0.7)
     if save_path:
@@ -88,7 +96,7 @@ if __name__ == "__main__":
     car_co2 = 0.772   # kg per 1km for 1t 
     car_capacity = 1500
     bike_capacity = 100
-    
+    empty_car_weight = 15000  # in kg
 
     for i in range(1, number_instances + 1):
         instance = ""
@@ -96,7 +104,7 @@ if __name__ == "__main__":
             instance += "0"
         instance += str(i)
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(instance)  # prepare instance
-        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2)
+        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2, empty_car_weight)
         print(str(i) + ":")
         print(round(costs, 3))
         print("number_bikes", mean_transport.count(0))

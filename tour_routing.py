@@ -121,72 +121,6 @@ def calculate_savings(dist_matrix: np.ndarray) -> List[Tuple[float, int, int]]:
     savings.sort(reverse=True, key=lambda x: x[0])
     return savings
 
-
-"""
-# Clarke and Wright Savings Algorithm (Optimized for continuous routes)
-def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
-                      empty_truck_weight: float):
-
-    num_points = dist_matrix.shape[0]
-    routes = [[i] for i in range(1, num_points)]  # Initial routes for each customer
-    route_loads = {i: demands[i] for i in range(1, num_points)}  # Track route loads
-    total_emission = 0  # Emission tracking
-
-    # Calculate savings
-    savings = calculate_savings(dist_matrix)
-
-    # Merge routes based on savings
-    for saving, i, j in savings:
-        # Find the routes containing i and j
-        route_i = next((route for route in routes if i in route), None)
-        route_j = next((route for route in routes if j in route), None)
-
-        # Check if i and j are in different routes and merging is feasible
-        if route_i is None or route_j is None or route_i == route_j:
-            continue
-
-        # Check if the new merged route exceeds capacity
-        if route_loads[route_i[0]] + route_loads[route_j[0]] <= capacity:
-            # Merge the routes in a continuous sequence
-
-            if route_i[-1] == i and route_j[0] == j:  # Tail-to-head
-                route_i.extend(route_j)
-                routes.remove(route_j)
-
-            elif route_i[0] == i and route_j[-1] == j:  # Head-to-tail
-                route_j.extend(route_i)
-                routes.remove(route_i)
-
-            elif route_i[-1] == i and route_j[-1] == j:  # Tail-to-tail
-                route_i.extend(route_j[::-1])
-                routes.remove(route_j)
-
-            elif route_i[0] == i and route_j[0] == j:  # Head-to-head
-                route_j.reverse()
-                route_j.extend(route_i)
-
-            # Update route loads and remove merged route
-            route_loads[route_i[0]] += route_loads[route_j[0]]
-
-    # Ensure all customers are served (if any customer is unassigned, assign to a new route)
-    unassigned_customers = [i for i in range(1, num_points) if not any(i in route for route in routes)]
-    for customer in unassigned_customers:
-        routes.append([customer])
-
-    # Calculate emissions and finalize routes
-    for route in routes:
-        current_capacity = 0
-        for i in range(0, len(route) - 1):
-            current_capacity += demands[route[i + 1]]
-            total_emission += truck_co2 * (current_capacity + empty_truck_weight) * dist_matrix[route[i], route[i + 1]]
-        # Add return to depot
-        total_emission += truck_co2 * empty_truck_weight * dist_matrix[route[len(route) - 1], 0]
-
-    total_emission = total_emission / 1000  # Convert grams to kilograms
-    return routes, total_emission
-"""
-
-
 def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
                       empty_truck_weight: float, vertices: List[Tuple[float, float]]):
     """Clarke and Wright Savings Algorithm (Optimized for continuous routes)."""
@@ -277,7 +211,7 @@ def plot_tour_planning(vertices: List[Tuple[float, float]], routes: List[List[in
     plt.axis('equal')
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.title("Plotted Routes of tour planning")
+    plt.title("Tour Planning Visualization")
     plt.grid(True)
     if save_path:
         plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
@@ -318,4 +252,3 @@ if __name__ == '__main__':
         print("CW")
         print(round(total_emission, 3))
         plot_tour_planning(clients, routes_cw, "results/" + "CW_" + instance + ".png")
-        print("--------------------------------------------------")

@@ -57,7 +57,7 @@ if __name__ == '__main__':
                 continue
             total_cost_of_cluster, transport_list = get_costs_star_scenario(clients[hub], coord_of_client,
                                                                             total_demand_list, car_capacity,
-                                                                            car_co2)
+                                                                            car_co2, empty_car_weight)
             cluster_transport_list.append(transport_list)
             costs_of_cluster.append(total_cost_of_cluster)
         # scenario 2_ routing through hubs
@@ -70,5 +70,5 @@ if __name__ == '__main__':
         for cluster_costs in costs_of_cluster:
             summed_costs += cluster_costs
         summed_costs += tour_costs
-        print(round(summed_costs, 3)
+        print(round(summed_costs, 3))
         plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route)
