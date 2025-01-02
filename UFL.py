@@ -275,7 +275,6 @@ if __name__ == "__main__":
         )
     
         Print results for the current instance
-        print(f"Processing instance {instance_number}")
         print("customer_assignments:", clients_assignments)
         print("client_assignements_idx:", client_assignements_idx)
         print("candidats_ouvert:", candidats_ouvert)
