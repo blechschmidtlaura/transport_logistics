@@ -1,5 +1,3 @@
-from typing import Tuple, List
-
 from matplotlib import pyplot as plt
 
 from data import collect_infos_from_instance
@@ -152,97 +150,6 @@ def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
         plt.show()
 
 
-def plot_combined_routes_and_tours(depot: Tuple[float, float],
-                                   clients: List[Tuple[float, float]],
-                                   means_transport: List[List[int]],
-                                   vertices: List[Tuple[float, float]],
-                                   routes: List[int],
-                                   save_path=None):
-    """
-    Combines plotting of routes (bike and car) and tour planning.
-    :param depot: Coordinates of the depot (x, y).
-    :param clients: List of client coordinates [(x1, y1), (x2, y2), ...].
-    :param means_transport: List of lists indicating transport means for each hub (0 for bike, 1 for car).
-    :param vertices: List of vertices (depot and hubs) coordinates [(xd, yd), ...].
-    :param routes: List of hub indices in visiting order for the tour.
-    :param save_path: Path to save the plot as an image. If None, shows the plot.
-    """
-    plt.figure(figsize=(12, 10))
-    # Flags for labels to avoid duplicate legend entries
-    bike_route_added = False
-    car_route_added = False
-    bike_client_added = False
-    car_client_added = False
-    depot_added = False
-    # Plot bike and car routes from hubs to clients
-    for hub_idx, hub in enumerate(depot):
-        for client_idx, client in enumerate(clients[hub_idx]):
-            transport_modes = means_transport[hub_idx]
-            if not transport_modes:  # No clients assigned to the hub
-                break
-            if transport_modes[client_idx] == 0:  # Bike route
-                if not bike_route_added:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='green', linestyle='--',
-                             label='Bike Route')
-                    bike_route_added = True
-                else:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='green', linestyle='--')
-                if not bike_client_added:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='green', label='Client (Bike)', s=100,
-                                edgecolor='black', zorder=2)
-                    bike_client_added = True
-                else:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='green', s=100, edgecolor='black',
-                                zorder=2)
-            elif transport_modes[client_idx] == 1:  # Car route
-                if not car_route_added:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='orange', linestyle='-',
-                             label='Car Route')
-                    car_route_added = True
-                else:
-                    plt.plot([vertices[hub][0], vertices[client][0]], [vertices[hub][1], vertices[client][1]],
-                             color='orange', linestyle='-')
-                if not car_client_added:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='orange', label='Client (Car)', s=100,
-                                edgecolor='black', zorder=2)
-                    car_client_added = True
-                else:
-                    plt.scatter(vertices[client][0], vertices[client][1], color='orange', s=100, edgecolor='black',
-                                zorder=2)
-    # Plot tour routes between hubs
-    for single_route in routes:
-        route_with_depot = [vertices[0]] + single_route + [vertices[0]]  # Include depot at start and end
-        for i in range(len(route_with_depot) - 1):
-            start = route_with_depot[i]
-            end = route_with_depot[i + 1]
-            plt.annotate("", xy=end, xytext=start,
-                         arrowprops=dict(arrowstyle="->", color='blue', lw=2, alpha=0.7))
-    for idx, vertex in enumerate(vertices):
-        plt.scatter(*vertex, color='orange', s=150 if idx == 0 else 100)
-        plt.text(vertex[0] + 0.1, vertex[1] + 0.1, str(idx), fontsize=10, color="black")
-    for hub in depot:
-        if not depot_added:
-            plt.scatter(vertices[hub][0], vertices[hub][1], color='blue', label='Depots', s=150)
-            depot_added = True
-        else:
-            plt.scatter(vertices[hub][0], vertices[hub][1], color='blue', s=150)
-    # Customize the plot
-    plt.xlabel("X Coordinate")
-    plt.ylabel("Y Coordinate")
-    plt.title("Combined Routes and Tour Planning")
-    plt.legend(loc='best')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.axis('equal')
-    # Save or show the plot
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
-
-
 if __name__ == "__main__":
     car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
@@ -267,18 +174,16 @@ if __name__ == "__main__":
 
         # Compute the distance matrix
         dist_matrix = distance_matrix(clients, candidats)
-
         # Compute costs for car and bike transportation
         cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-
         # Apply the greedy heuristic algorithm with demand
         total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(
             candidats, clients, demands, cost_client_car_bike
         )
 
-        print("customer_assignments:", clients_assignments)
-        print("client_assignements_idx:", client_assignements_idx)
-        print("candidats_ouvert:", candidats_ouvert)
+        #print("customer_assignments:", clients_assignments)
+        #print("client_assignements_idx:", client_assignements_idx)
+        #print("candidats_ouvert:", candidats_ouvert)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
 
@@ -315,4 +220,7 @@ if __name__ == "__main__":
         # print("candidats_ouvert_per_grp", candidats_ouvert)
         # print("total cost_per_grp",total_cost)
         print("total cost", sum(total_cost))
+        clients = groups[1]+groups[2]+groups[3]+groups[4]
+        warehouses=[depot]+selected_points[1]+selected_points[2]+selected_points[3]+selected_points[4]
+        plot_clients_refrigerator(clients,warehouses,clients_assignments[0]+clients_assignments[1]+clients_assignments[2]+clients_assignments[3])
         print(f"Completed instance {instance}\n")
