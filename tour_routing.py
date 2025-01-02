@@ -211,7 +211,7 @@ if __name__ == '__main__':
         plot_tour_planning(clients, routes, "results/" + "NN_" + instance + ".png")
 
         routes_sn, costs_sn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight,
-                                             True)
+                                               True)
         print("SN")
         print(round(costs_sn, 3))
         plot_tour_planning(clients, routes_sn, "results/" + "SN_" + instance + ".png")
