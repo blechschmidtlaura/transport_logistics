@@ -8,7 +8,7 @@ def index(elt, list):
     for i in range(len(list)):
         if list[i] == elt:
             return i
-    return -1  # Retourne -1 si l'élément n'est pas trouvé
+    return -1
 
 
 def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike,
