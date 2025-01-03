@@ -204,17 +204,8 @@ if __name__ == "__main__":
         # Apply the greedy heuristic algorithm with demand
         total_cost, candidates_open, clients_assignments, client_assignments_idx = greedy_heuristic_with_demand(
             candidates, clients, demands, cost_client_car_bike, min_assigned_clients)
-
-        # print("customer_assignments:", clients_assignments)
-        # print("client_assignements_idx:", client_assignements_idx)
-        # print("candidats_ouvert:", candidats_ouvert)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
-
-        # Plot the clients and candidates for the current instance
-        # plot_clients_refrigerateur(clients, candidats, clients_assignments)
-
-        print(f"Completed instance {instance}\n")
 
     # resolution instance 11,1
     for i in range(11, 13):
@@ -225,8 +216,6 @@ if __name__ == "__main__":
         total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(depot,
             clients, demands, capacity, 5)
         print("total cost", sum(total_cost))
-
         plot_clients_refrigerator(clients, warehouses,
                                   clients_assignments[0] + clients_assignments[1] + clients_assignments[2] +
                                   clients_assignments[3])
-        print(f"Completed instance {instance}\n")

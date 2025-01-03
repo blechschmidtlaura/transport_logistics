@@ -128,6 +128,4 @@ if __name__ == "__main__":
         costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2)
         print(str(i) + ":")
         print(round(costs, 3))
-        print("number_bikes", mean_transport.count(0))
-        print("number_cars", mean_transport.count(1))
         plot_routes(clients[0], clients[1:], mean_transport)
