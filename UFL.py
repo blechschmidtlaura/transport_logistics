@@ -11,7 +11,8 @@ def index(elt, list):
     return -1  # Retourne -1 si l'élément n'est pas trouvé
 
 
-def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike, min_assigned_clients):
+def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike,
+                      min_assigned_clients):
     # Create copies of the current assignments and client counts for modification
     nb_client_candidat_copy = nb_client_candidate.copy()
     assignmentclients_candidate = assignments.copy()
@@ -110,6 +111,30 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
     client_assignments_idx = [index(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
+def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assigned_clients):
+    hubs_per_group = 50
+    selected_points, groups = split_and_select(clients_in_group, hubs_per_group)
+    total_cost = [0, 0, 0, 0]
+    candidates_open = [[], [], [], []]
+    clients_assignments = [None, None, None, None]
+    client_assignments_idx = [None, None, None, None]
+    for i in range(1, 5):  # Parcourir les clés de 1 à 4
+        clients_in_group = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
+        candidates_in_group = selected_points[i]  # random sample of candidates
+        dist_matrix_group = distance_matrix(clients_in_group, candidates_in_group)
+        cost_client_car_bike_group = get_costs_car_bike(clients_in_group, candidates_in_group, demands, capacity, dist_matrix_group)
+        total_cost[i - 1], candidates_open[i - 1], clients_assignments[i - 1], client_assignments_idx[
+            i - 1] = greedy_heuristic_with_demand(
+            candidates_in_group, clients_in_group, demands, cost_client_car_bike_group, min_assigned_clients)
+
+    clients_all = groups[1] + groups[2] + groups[3] + groups[4]
+    warehouses = [depot] + selected_points[1] + selected_points[2] + selected_points[3] + selected_points[4]
+    candidates_open_all = candidates_open[0] + candidates_open[1] + candidates_open[2] + candidates_open[3]
+    clients_assignments_all = clients_assignments[0][1:] + clients_assignments[1][1:] + clients_assignments[2][1:] + clients_assignments[
+        3][1:]
+    client_assignments_idx_all = client_assignments_idx[0][1:] + client_assignments_idx[1][1:] + client_assignments_idx[2][1:] + \
+                              client_assignments_idx[3][1:]
+    return total_cost, candidates_open_all, clients_assignments_all, client_assignments_idx_all, clients_all, warehouses
 
 def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
     """
@@ -137,8 +162,7 @@ def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
         plt.arrow(assignments[i][0], assignments[i][1],
                   client[0] - assignments[i][0], client[1] - assignments[i][1],
                   head_width=0.3, head_length=0.3, fc='gray', ec='gray', length_includes_head=True)
-    # plt.scatter(*(52.0, 24.0), color='yellow')
-    # Légendes et personnalisation
+
     plt.title("Affectation des clients aux entrepôts")
     plt.xlabel("X")
     plt.ylabel("Y")
@@ -157,7 +181,8 @@ if __name__ == "__main__":
     empty_car_weight = 15000  # in kg
     truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
     empty_truck_weight = 30000  # 3t per truck
-    ##Loop through instances "01" to "10"
+    min_assigned_clients = 5  # Minimum number of clients to assign to a candidate
+    # Loop through instances "01" to "10"
     for i in range(1, 11):
         instance = ""
         if i < 10:
@@ -167,23 +192,22 @@ if __name__ == "__main__":
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)  # prepare instance# vertices without routes
         # Initialize variables
-        candidats = clients  # All clients are candidates initially
+        candidates = clients  # All clients are candidates initially
         depot = clients[0]  # The depot is the first client
         clients = clients[1:]  # Remove the depot from the clients list
         demands = demands[1:]  # Remove the depot demand
 
         # Compute the distance matrix
-        dist_matrix = distance_matrix(clients, candidats)
+        dist_matrix = distance_matrix(clients, candidates)
         # Compute costs for car and bike transportation
-        cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
+        cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
         # Apply the greedy heuristic algorithm with demand
-        total_cost, candidats_ouvert, clients_assignments, client_assignements_idx = greedy_heuristic_with_demand(
-            candidats, clients, demands, cost_client_car_bike
-        )
+        total_cost, candidates_open, clients_assignments, client_assignments_idx = greedy_heuristic_with_demand(
+            candidates, clients, demands, cost_client_car_bike, min_assigned_clients)
 
-        #print("customer_assignments:", clients_assignments)
-        #print("client_assignements_idx:", client_assignements_idx)
-        #print("candidats_ouvert:", candidats_ouvert)
+        # print("customer_assignments:", clients_assignments)
+        # print("client_assignements_idx:", client_assignements_idx)
+        # print("candidats_ouvert:", candidats_ouvert)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
 
@@ -197,30 +221,12 @@ if __name__ == "__main__":
         instance = str(i)
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)
-        # Initialize variables
-        candidats = clients  # All clients are candidates initially
-        depot = clients[0]  # The depot is the first client
-        clients = clients[1:]  # Remove the depot from the clients list
-        demands = demands[1:]  # Remove the depot demand
-        selected_points, groups = split_and_select(clients)
-        total_cost = [0, 0, 0, 0]
-        candidats_ouvert = [[], [], [], []]
-        clients_assignments = [None, None, None, None]
-        client_assignements_idx = [None, None, None, None]
-        for i in range(1, 5):  # Parcourir les clés de 1 à 4
-            clients = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
-            candidats = selected_points[i]
-            dist_matrix = distance_matrix(clients, candidats)
-            cost_client_car_bike = get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix)
-            total_cost[i - 1], candidats_ouvert[i - 1], clients_assignments[i - 1], client_assignements_idx[
-                i - 1] = greedy_heuristic_with_demand(
-                candidats, clients, demands, cost_client_car_bike)
-        # print("customer_assignments_per_grp", clients_assignments)
-        # print("client_assignements_idx_per_grp",client_assignements_idx)
-        # print("candidats_ouvert_per_grp", candidats_ouvert)
-        # print("total cost_per_grp",total_cost)
+
+        total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(depot,
+            clients, demands, capacity, 5)
         print("total cost", sum(total_cost))
-        clients = groups[1]+groups[2]+groups[3]+groups[4]
-        warehouses=[depot]+selected_points[1]+selected_points[2]+selected_points[3]+selected_points[4]
-        plot_clients_refrigerator(clients,warehouses,clients_assignments[0]+clients_assignments[1]+clients_assignments[2]+clients_assignments[3])
+
+        plot_clients_refrigerator(clients, warehouses,
+                                  clients_assignments[0] + clients_assignments[1] + clients_assignments[2] +
+                                  clients_assignments[3])
         print(f"Completed instance {instance}\n")

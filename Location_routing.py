@@ -5,8 +5,8 @@ from data import collect_infos_from_instance
 from star_scenario import get_costs_star_scenario
 from tour_routing import nearest_neighbor
 from utils import get_costs_car_bike, prepare_clients_to_plot, calculate_distance_matrix
-from UFL import greedy_heuristic_with_demand, plot_combined_routes_and_tours
-from tour_routing import nearest_neighbor, sweep_nearest
+from UFL import greedy_heuristic_with_demand, heuristic_big_instances
+from tour_routing import nearest_neighbor
 from utils import get_costs_car_bike,  prepare_clients_to_plot, calculate_distance_matrix
 from UFL import greedy_heuristic_with_demand
 from typing import Tuple, List
@@ -165,7 +165,7 @@ def plot_emissions_per_instance(node_counts, capacity_list, emissions_by_version
 
 
 if __name__ == '__main__':
-    number_instances = 10
+    number_instances = 12
     car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
     bike_capacity = 100
@@ -183,7 +183,6 @@ if __name__ == '__main__':
         print(instance + ": ")
         costs_for_parameter = []
         for min_clients in min_assigned_clients:
-            print(min_clients)
             dimension, capacity, indices, vertices, demands = collect_infos_from_instance(
                 instance)  # prepare instance# vertices without routes
             if min_clients > dimension:
@@ -196,8 +195,11 @@ if __name__ == '__main__':
             clients = vertices[1:]
             demands = demands[1:]
             cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
-            total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
-                candidates, clients, demands, cost_client_car_bike, min_clients)
+            if i < 11:
+                total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
+                    candidates, clients, demands, cost_client_car_bike, min_clients)
+            else:
+                total_cost, open_candidates, client_assign, client_assignments_idx, clients, warehouses = heuristic_big_instances(hub, clients, demands, capacity, min_clients)
             print(total_cost)
             # 1: [0,1,0,1,..], 1=hub
             # 2: [in cluster of hub idx, in cluster of hub idx, ...]
@@ -229,7 +231,6 @@ if __name__ == '__main__':
                                                                                 car_co2, empty_car_weight)
                 cluster_transport_list.append(transport_list)
                 costs_of_cluster.append(total_cost_of_cluster)
-            print(costs_of_cluster)
             # scenario 2_ routing through hubs
             coord_of_hubs = [candidates[idx] for idx in hub_ids]
             route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
@@ -243,9 +244,8 @@ if __name__ == '__main__':
             costs_for_parameter.append(summed_costs)
             # plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route)
         costs_of_instances.append(costs_for_parameter)
-    dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101]  # , 3001, 4001]  # number of nodes of each instance
-    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970]  # , 10000,
-    # 15000]  # capacity of each instance
+    dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
+    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000, 15000]  # capacity of each instance
     emissions_by_version = costs_of_instances
     parameter_settings = min_assigned_clients  # how many clients one hub serves at least
-    plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings)
+    plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings, "results/emissions_3_assigned_clients.png")

@@ -44,9 +44,9 @@ def distance(point1, point2):
     return np.sqrt(dx ** 2 + dy ** 2)
 
 
-def split_and_select(points):
+def split_and_select(points, hubs_per_group):
     """
-    Divise les points en 4 groupes selon leurs coordonnées et sélectionne 10 points aléatoires par groupe.
+    Divise les points en 4 groupes selon leurs coordonnées et sélectionne hubs_per_group points aléatoires par groupe.
 
     Args:
         points (list of tuples): Une liste de tuples (x, y) représentant les coordonnées des points.
@@ -86,15 +86,17 @@ def split_and_select(points):
         else:
             groups[4].append((x, y))
     random.seed(44)
-    # Sélectionner aléatoirement 10 points dans chaque groupe
+    # Sélectionner aléatoirement 50 points dans chaque groupe
     selected_points = {
-        group_id: random.sample(group_points, min(len(group_points), 50))
+        group_id: random.sample(group_points, min(len(group_points), hubs_per_group))
         for group_id, group_points in groups.items()
     }
 
     return selected_points, groups
 
-
+"""
+methods adapted for the third scenario
+"""
 def distance_matrix(clients, candidats):
     # Initialisation
     distances = np.zeros((len(candidats), len(clients)))
