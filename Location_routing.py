@@ -1,17 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from data import collect_infos_from_instance
 from star_scenario import get_costs_star_scenario
+from UFL import heuristic_big_instances, greedy_heuristic_with_demand
 from tour_routing import nearest_neighbor
 from utils import get_costs_car_bike, prepare_clients_to_plot, calculate_distance_matrix
-from UFL import greedy_heuristic_with_demand, heuristic_big_instances
-from tour_routing import nearest_neighbor
-from utils import get_costs_car_bike,  prepare_clients_to_plot, calculate_distance_matrix
-from UFL import greedy_heuristic_with_demand
 from typing import Tuple, List
 
 from matplotlib import pyplot as plt
+
+
 def plot_combined_routes_and_tours(depot: Tuple[float, float],
                                    clients: List[Tuple[float, float]],
                                    means_transport: List[List[int]],
@@ -20,12 +18,6 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
                                    save_path=None):
     """
     Combines plotting of routes (bike and car) and tour planning.
-    :param depot: Coordinates of the depot (x, y).
-    :param clients: List of client coordinates [(x1, y1), (x2, y2), ...].
-    :param means_transport: List of lists indicating transport means for each hub (0 for bike, 1 for car).
-    :param vertices: List of vertices (depot and hubs) coordinates [(xd, yd), ...].
-    :param routes: List of hub indices in visiting order for the tour.
-    :param save_path: Path to save the plot as an image. If None, shows the plot.
     """
     plt.figure(figsize=(12, 10))
     # Flags for labels to avoid duplicate legend entries
@@ -38,7 +30,7 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
     for hub_idx, hub in enumerate(depot):
         for client_idx, client in enumerate(clients[hub_idx]):
             transport_modes = means_transport[hub_idx]
-            if transport_modes == []:  # No clients assigned to the hub
+            if not transport_modes:  # No clients assigned to the hub
                 break
             if transport_modes[client_idx] == 0:  # Bike route
                 if not bike_route_added:
@@ -105,21 +97,7 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
 
 def plot_emissions_per_instance(node_counts, capacity_list, emissions_by_version, parameter_settings,
                                 save_path=None):
-    """
-    Plots CO2 emissions for different parameter settings against the sorted x-axis (nodes or capacity).
-
-    :param node_counts: List of node counts for 12 instances.
-    :param capacity_list: List of capacities for 12 instances.
-    :param emissions_by_version: List of lists containing CO2 emissions for each version.
-                                 Each inner list corresponds to a specific parameter setting.
-    :param parameter_settings: List of parameter settings (used for labeling different colors).
-    :param sort_key: Key to sort the x-axis, either "nodes" or "capacity".
-    :param save_path: Optional; Path to save the plot as an image. If None, shows the plot.
-    """
-    if len(emissions_by_version) != len(node_counts):
-        raise ValueError("The number of parameter settings must match the number of emission versions.")
-    if len(node_counts) != len(capacity_list):
-        raise ValueError("The lengths of node counts and capacity list must match.")
+    """plot CO2 emissions for different parameter settings and instance configurations."""
 
     # Lexicographic sorting: First by node_counts, then by capacity_list
     combined_sort_keys = list(zip(node_counts, capacity_list))
@@ -127,27 +105,16 @@ def plot_emissions_per_instance(node_counts, capacity_list, emissions_by_version
                           key=lambda idx: (combined_sort_keys[idx][0], combined_sort_keys[idx][1]))
     sorted_x_nodes = np.array(node_counts)[sort_indices]
     sorted_x_capacity = np.array(capacity_list)[sort_indices]
-
     sorted_emissions_by_version = [emissions_by_version[idx] for idx in sort_indices]
-    """
-    for emissions in emissions_by_version:
-        print(emissions)
-        # Sort emissions according to the indices
-        sorted_emissions = [emissions[int(idx)] for idx in sort_indices]
-        sorted_emissions_by_version.append(sorted_emissions)
-        print(sorted_emissions_by_version)
-        """
-    # Transpose sorted_emissions_by_version for parameter-wise plotting
     sorted_emissions_by_parameter = list(map(list, zip(*sorted_emissions_by_version)))
 
     plt.figure(figsize=(12, 8))
-
     color = ['blue', 'green', 'red', 'purple', 'orange', 'yellow']
-    # Plot each parameter setting with a different color and label
+    # Plot each parameter setting and instance with a different color and label
     for emissions, param, color in zip(sorted_emissions_by_parameter, parameter_settings, color):
         plt.plot(emissions, marker='o', color=color, label=f'Parameter = {param}')
 
-    plt.xlabel("Number of Nodes (Sorted) and Capacity (Secondary)", fontsize=14)
+    plt.xlabel("Number of Nodes and Capacity", fontsize=14)
     plt.ylabel("CO2 Emissions (kg)", fontsize=14)
     plt.title("CO2 Emissions changing with number of needed clients for hub", fontsize=16)
     plt.legend(title="Parameter Settings", fontsize=12)
@@ -199,10 +166,10 @@ if __name__ == '__main__':
                 total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
                     candidates, clients, demands, cost_client_car_bike, min_clients)
             else:
-                total_cost, open_candidates, client_assign, client_assignments_idx, clients, warehouses = heuristic_big_instances(hub, clients, demands, capacity, min_clients)
-            print(total_cost)
-            # 1: [0,1,0,1,..], 1=hub
-            # 2: [in cluster of hub idx, in cluster of hub idx, ...]
+                total_cost, open_candidates, client_assign, client_assignments_idx, clients, warehouses = heuristic_big_instances(
+                    hub, clients, demands, capacity, min_clients)
+            # open_candidates: [0,1,0,1,..], 1=hub
+            # client_assignments_idx: [in cluster of hub idx, in cluster of hub idx, ...]
 
             # scenario 1: calculate demands of each hub: sum of all demands in cluster
             demands_of_cluster = []
@@ -242,10 +209,12 @@ if __name__ == '__main__':
             summed_costs += tour_costs
             print(round(summed_costs, 3))
             costs_for_parameter.append(summed_costs)
-            # plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route)
+            plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route)
         costs_of_instances.append(costs_for_parameter)
     dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
-    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000, 15000]  # capacity of each instance
+    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000,
+                     15000]  # capacity of each instance
     emissions_by_version = costs_of_instances
     parameter_settings = min_assigned_clients  # how many clients one hub serves at least
-    plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings, "results/emissions_3_assigned_clients.png")
+    plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings,
+                                "results/emissions_3_assigned_clients.png")
