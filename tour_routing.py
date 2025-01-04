@@ -201,6 +201,7 @@ def plot_emissions_per_instance2(node_counts, capacity_list, emissions_by_versio
             plt.plot(emission, marker='o')
     else:
         color = ['blue', 'green', 'red', 'purple', 'orange', 'yellow']
+        color = color[:len(parameter_settings)]
         # Plot each parameter setting with a different color and label
         for emissions, param, color in zip(sorted_emissions_by_parameter, parameter_settings, color):
             plt.plot(emissions, marker='o', color=color, label=f'Parameter = {param}')
@@ -223,7 +224,7 @@ def plot_emissions_per_instance2(node_counts, capacity_list, emissions_by_versio
 
 
 if __name__ == '__main__':
-    number_instances = 10
+    number_instances = 12
 
     truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
     empty_truck_weight = 30000  # 3t per truck
@@ -264,6 +265,6 @@ if __name__ == '__main__':
         print(round(total_emission, 3))
         plot_tour_planning(clients, routes_cw, "results/" + "CW_" + instance + ".png")
         all_instances_res.append(res_list)
-    dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101]#, 3001, 4001]  # number of nodes of each instance
-    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970]#, 10000, 15000]  # capacity of each instance
-    plot_emissions_per_instance2(dimension_list, capacity_list, all_instances_res, [], "results/" + "emissions_tourrouting.png")
+    dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
+    capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000, 15000]  # capacity of each instance
+    plot_emissions_per_instance2(dimension_list, capacity_list, all_instances_res, ["Nearest Neighbor", "Sweep Nearest Neighbor", "Clarke and Wright"], "results/" + "emissions_tourrouting.png")

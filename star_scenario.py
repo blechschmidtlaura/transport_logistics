@@ -1,13 +1,13 @@
 from data import collect_infos_from_instance
-from utils import calculate_distance_matrix
+from utils import calculate_distance_matrix, distance
 import matplotlib.pyplot as plt
 
-"""
-def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
+
+def get_costs_star_scenario_without_empty_car(hub_coord, clients, demands, car_capacity, car_co2):
     dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
     co2_cost = 0
     means_transport = []
-    for j in range (len(clients)): 
+    for j in range(len(clients)):
         #condition for bike, <= 500kg, <= 6
             if demands[j] <= 500 and dist[j] * 2 <= 6: # take bike
             #bike_routes.append(route)
@@ -21,7 +21,6 @@ def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
                     co2_cost += car_co2 * load * dist[j]+ 0.2*2*dist[j]
                     total_load -= load  # reeduce the remaining demand
     return co2_cost, means_transport
-"""
 
 def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2, empty_car_weight):
     means_transport = []  # 0 for bike, 1 for car
@@ -117,6 +116,7 @@ if __name__ == "__main__":
     car_co2 = 0.772   # kg per 1km for 1t 
     car_capacity = 1500
     bike_capacity = 100
+    empty_car_weight = 15000  # 1,5t per car
     
 
     for i in range(1, number_instances + 1):
@@ -125,7 +125,12 @@ if __name__ == "__main__":
             instance += "0"
         instance += str(i)
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(instance)  # prepare instance
-        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2)
+        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2, empty_car_weight)
         print(str(i) + ":")
         print(round(costs, 3))
-        plot_routes(clients[0], clients[1:], mean_transport)
+        plot_routes(clients[0], clients[1:], mean_transport, save_path=f"results/star_scenario_{instance}.png")
+        # different calculation of route because of no explicit empty car weight
+        costs, mean_transport = get_costs_star_scenario_without_empty_car(clients[0], clients[1:], demands[1:], car_capacity, car_co2)
+        print(str(i) + ":")
+        print(round(costs, 3))
+        plot_routes(clients[0], clients[1:], mean_transport, save_path=f"results/star_scenario_{instance}_without_empty_car.png")
