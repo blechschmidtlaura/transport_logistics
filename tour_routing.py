@@ -3,11 +3,11 @@ from typing import List, Tuple
 import numpy as np
 from matplotlib import pyplot as plt
 
-from data import collect_infos_from_instance
+from data import collect_infos_from_instance, plot_emissions_per_instance
 from utils import prepare_clients_to_plot, calculate_distance_matrix, get_hub_id
 
 
-def nearest_neighbor(hub_coord, vertices, client_demands, capacity, truck_co2, empty_truck_weight, sweep):
+def nearest_neighbor(hub_coord, vertices, client_demands, capacity, truck_co2, empty_truck_co2, sweep):
     """
     nearest neighbor heuristic with optional sweep phase (boolean sweep is true or false)
     """
@@ -50,15 +50,14 @@ def nearest_neighbor(hub_coord, vertices, client_demands, capacity, truck_co2, e
             if nearest is None or current_capacity >= capacity:  # No feasible neighbor or fully loaded
                 # End the current route
                 if current_node != hub_id:  # If not already at the hub
-                    costs_2 += dist_matrix[current_node, hub_id] * empty_truck_weight  # Return trip emission
+                    costs_2 += dist_matrix[current_node, hub_id] * empty_truck_co2  # Return trip emission
                 routes.append(route)  # Save the route
                 break  # Exit the inner while-loop to start a new route
             route.append(vertices[nearest])
             visited[nearest] = new_demand_after_visit
             current_capacity += new_load
             current_node = nearest
-            costs_2 += truck_co2 * (
-                    current_capacity + empty_truck_weight) * min_dist  # truckco2 1t per 1km -> 1kg per 1km
+            costs_2 += ((truck_co2 * current_capacity) + empty_truck_co2) * min_dist  # truckco2 1t per 1km -> 1kg per 1km
     costs_2 = costs_2 / 1000  # in kg
     return routes, costs_2
 
@@ -87,7 +86,7 @@ def calculate_savings(dist_matrix: np.ndarray) -> List[Tuple[float, int, int]]:
 
 
 def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int, truck_co2: float,
-                      empty_truck_weight: float, vertices: List[Tuple[float, float]]):
+                      empty_truck_co2: float, vertices: List[Tuple[float, float]]):
     """Clarke and Wright Savings Algorithm (Optimized for continuous routes)."""
     num_points = dist_matrix.shape[0]
     # Initial routes for each customer, now storing coordinates
@@ -141,10 +140,10 @@ def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int
         for i in range(0, len(route) - 1):
             # Get the coordinates of the points in the route
             current_capacity += demands[vertices.index(route[i + 1])]
-            total_emission += truck_co2 * (current_capacity + empty_truck_weight) * dist_matrix[
+            total_emission += ((truck_co2 * current_capacity) + empty_truck_co2) * dist_matrix[
                 vertices.index(route[i]), vertices.index(route[i + 1])]
         # Add return to depot
-        total_emission += truck_co2 * empty_truck_weight * dist_matrix[vertices.index(route[len(route) - 1]), 0]
+        total_emission += empty_truck_co2 * dist_matrix[vertices.index(route[len(route) - 1]), 0]
 
     total_emission = total_emission / 1000  # Convert to kilograms
     return routes, total_emission
@@ -183,51 +182,11 @@ def plot_tour_planning(vertices: List[Tuple[float, float]], routes: List[List[in
     else:
         plt.show()
 
-
-def plot_emissions_per_instance2(node_counts, capacity_list, emissions_by_version, parameter_settings,
-                                 save_path=None):
-    # Lexicographic sorting: First by node_counts, then by capacity_list
-    combined_sort_keys = list(zip(node_counts, capacity_list))
-    sort_indices = sorted(range(len(combined_sort_keys)),
-                          key=lambda idx: (combined_sort_keys[idx][0], combined_sort_keys[idx][1]))
-    sorted_x_nodes = np.array(node_counts)[sort_indices]
-    sorted_x_capacity = np.array(capacity_list)[sort_indices]
-    sorted_emissions_by_version = [emissions_by_version[idx] for idx in sort_indices]
-    sorted_emissions_by_parameter = list(map(list, zip(*sorted_emissions_by_version)))
-    plt.figure(figsize=(12, 8))
-
-    if len(parameter_settings) == 0:
-        for emission in sorted_emissions_by_parameter:
-            plt.plot(emission, marker='o')
-    else:
-        color = ['blue', 'green', 'red', 'purple', 'orange', 'yellow']
-        color = color[:len(parameter_settings)]
-        # Plot each parameter setting with a different color and label
-        for emissions, param, color in zip(sorted_emissions_by_parameter, parameter_settings, color):
-            plt.plot(emissions, marker='o', color=color, label=f'Parameter = {param}')
-        plt.legend(title="Parameter Settings", fontsize=12)
-
-    plt.xlabel("Number of Nodes and Capacity", fontsize=14)
-    plt.ylabel("CO2 Emissions (kg)", fontsize=14)
-    plt.title("CO2 Emissions for tour routing scenario", fontsize=16)
-    plt.grid(True, linestyle='--', alpha=0.6)
-
-    # Create custom x-ticks combining nodes and capacities
-    x_ticks_labels = [f"{n} ({c})" for n, c in zip(sorted_x_nodes, sorted_x_capacity)]
-    plt.xticks(ticks=range(len(x_ticks_labels)), labels=x_ticks_labels, rotation=45)
-
-    # Save or show the plot
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
-
-
 if __name__ == '__main__':
     number_instances = 12
 
     truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
-    empty_truck_weight = 30000  # 3t per truck
+    empty_truck_co2 = 903  # 903g per km
     all_instances_res = []
     for i in range(1, number_instances + 1):
         res_list = []
@@ -243,7 +202,7 @@ if __name__ == '__main__':
         dist_matrix = calculate_distance_matrix(clients)
 
         # route with nearest neighbor heuristic
-        routes, costs_nn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight,
+        routes, costs_nn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_co2,
                                             False)
         res_list.append(costs_nn)
         print(instance + ": ")
@@ -251,14 +210,14 @@ if __name__ == '__main__':
         print(round(costs_nn, 3))
         plot_tour_planning(clients, routes, "results/" + "NN_" + instance + ".png")
 
-        routes_sn, costs_sn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_weight,
+        routes_sn, costs_sn = nearest_neighbor(clients[0], clients, demands, capacity, truck_co2, empty_truck_co2,
                                                True)
         res_list.append(costs_sn)
         print("SN")
         print(round(costs_sn, 3))
         plot_tour_planning(clients, routes_sn, "results/" + "SN_" + instance + ".png")
 
-        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_weight,
+        routes_cw, total_emission = clarke_and_wright(dist_matrix, demands, capacity, truck_co2, empty_truck_co2,
                                                       clients)
         res_list.append(total_emission)
         print("CW")
@@ -267,4 +226,4 @@ if __name__ == '__main__':
         all_instances_res.append(res_list)
     dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
     capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000, 15000]  # capacity of each instance
-    plot_emissions_per_instance2(dimension_list, capacity_list, all_instances_res, ["Nearest Neighbor", "Sweep Nearest Neighbor", "Clarke and Wright"], "results/" + "emissions_tourrouting.png")
+    plot_emissions_per_instance(dimension_list, capacity_list, all_instances_res, ["Nearest Neighbor", "Sweep Nearest Neighbor", "Clarke and Wright"], "results/" + "emissions_tourrouting_all.png")

@@ -1,7 +1,5 @@
-import numpy as np
-
-from data import collect_infos_from_instance
-from star_scenario import get_costs_star_scenario
+from data import collect_infos_from_instance, plot_emissions_per_instance
+from star_scenario import get_costs_star_scenario_emptycar_weight, get_costs_star_scenario
 from UFL import heuristic_big_instances, greedy_heuristic_with_demand
 from tour_routing import nearest_neighbor, clarke_and_wright
 from utils import get_costs_car_bike, prepare_clients_to_plot, calculate_distance_matrix
@@ -94,43 +92,6 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
     else:
         plt.show()
 
-
-def plot_emissions_per_instance(node_counts, capacity_list, emissions_by_version, parameter_settings,
-                                save_path=None):
-    """plot CO2 emissions for different parameter settings and instance configurations."""
-
-    # Lexicographic sorting: First by node_counts, then by capacity_list
-    combined_sort_keys = list(zip(node_counts, capacity_list))
-    sort_indices = sorted(range(len(combined_sort_keys)),
-                          key=lambda idx: (combined_sort_keys[idx][0], combined_sort_keys[idx][1]))
-    sorted_x_nodes = np.array(node_counts)[sort_indices]
-    sorted_x_capacity = np.array(capacity_list)[sort_indices]
-    sorted_emissions_by_version = [emissions_by_version[idx] for idx in sort_indices]
-    sorted_emissions_by_parameter = list(map(list, zip(*sorted_emissions_by_version)))
-
-    plt.figure(figsize=(12, 8))
-    color = ['blue', 'green', 'red', 'purple', 'orange', 'yellow']
-    # Plot each parameter setting and instance with a different color and label
-    for emissions, param, color in zip(sorted_emissions_by_parameter, parameter_settings, color):
-        plt.plot(emissions, marker='o', color=color, label=f'Parameter = {param}')
-
-    plt.xlabel("Number of Nodes and Capacity", fontsize=14)
-    plt.ylabel("CO2 Emissions (kg)", fontsize=14)
-    plt.title("CO2 Emissions changing with number of needed clients for hub", fontsize=16)
-    plt.legend(title="Parameter Settings", fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.6)
-
-    # Create custom x-ticks combining nodes and capacities
-    x_ticks_labels = [f"{n} ({c})" for n, c in zip(sorted_x_nodes, sorted_x_capacity)]
-    plt.xticks(ticks=range(len(x_ticks_labels)), labels=x_ticks_labels, rotation=45)
-
-    # Save or show the plot
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
-
-
 if __name__ == '__main__':
     number_instances = 12
     car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
@@ -195,7 +156,7 @@ if __name__ == '__main__':
                     continue
                 total_cost_of_cluster, transport_list = get_costs_star_scenario(clients[hub], coord_of_client,
                                                                                 total_demand_list, car_capacity,
-                                                                                car_co2, empty_car_weight)
+                                                                                car_co2)
                 cluster_transport_list.append(transport_list)
                 costs_of_cluster.append(total_cost_of_cluster)
             # scenario 2_ routing through hubs
@@ -213,12 +174,13 @@ if __name__ == '__main__':
             summed_costs += tour_costs
             print(round(summed_costs, 3))
             costs_for_parameter.append(summed_costs)
-            plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route, "results/" + instance + "_3_combined_cw_with_minclients_" + str(min_clients) + ".png")
+            plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route, "results/" + instance + "_3_combined_with_minclients_cw" + str(min_clients) + ".png")
         costs_of_instances.append(costs_for_parameter)
     dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
     capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000,
                      15000]  # capacity of each instance
     emissions_by_version = costs_of_instances
+    print(emissions_by_version)
     parameter_settings = min_assigned_clients  # how many clients one hub serves at least
     plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings,
                                 "results/emissions_3_assigned_clients_cw.png")
