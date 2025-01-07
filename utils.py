@@ -107,12 +107,13 @@ def distance_matrix(clients, candidats):
 
 
 def get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix):
+    emitted_value_only_car = 0.2  # kg per 1km, found in recherche
     co2_cost = np.zeros((len(candidats), len(clients)))
-    co2_car_emission = 0.772
+    co2_car_emission = 0.000772  # in kg for 1 kg per 1 km
 
     for i in range(len(candidats)):
         for j in range(len(clients)):
-            # condition for bike, <= 500kg, <= 6
+            # condition for bike, <= 500kg, <= 6km
             if demands[j] <= 500 and dist_matrix[i][j] * 2 <= 6:  # take bike
                 co2_cost[i][j] = 0
                 # bike_routes.append(route)
@@ -122,6 +123,6 @@ def get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix):
                 while total_load > 0:
                     load = min(demands[j],
                                capacity)  # if the truck can not carry all demands -> multiple routes to the same client
-                    co2_cost[i][j] += co2_car_emission * load * dist_matrix[i][j] + 0.2 * 2 * dist_matrix[i][j]
+                    co2_cost[i][j] += co2_car_emission * load * dist_matrix[i][j] + emitted_value_only_car * 2 * dist_matrix[i][j]
                     total_load -= load  # reduce the remaining demand
     return co2_cost

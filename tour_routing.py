@@ -58,7 +58,6 @@ def nearest_neighbor(hub_coord, vertices, client_demands, capacity, truck_co2, e
             current_capacity += new_load
             current_node = nearest
             costs_2 += ((truck_co2 * current_capacity) + empty_truck_co2) * min_dist  # truckco2 1t per 1km -> 1kg per 1km
-    costs_2 = costs_2 / 1000  # in kg
     return routes, costs_2
 
 
@@ -144,8 +143,6 @@ def clarke_and_wright(dist_matrix: np.ndarray, demands: List[int], capacity: int
                 vertices.index(route[i]), vertices.index(route[i + 1])]
         # Add return to depot
         total_emission += empty_truck_co2 * dist_matrix[vertices.index(route[len(route) - 1]), 0]
-
-    total_emission = total_emission / 1000  # Convert to kilograms
     return routes, total_emission
 
 
@@ -185,8 +182,8 @@ def plot_tour_planning(vertices: List[Tuple[float, float]], routes: List[List[in
 if __name__ == '__main__':
     number_instances = 12
 
-    truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
-    empty_truck_co2 = 903  # 903g per km
+    truck_co2 = 0.000311  # g per 1km for 1t -> g per km per kg
+    empty_truck_co2 = 0.903  # 0.903kg per km
     all_instances_res = []
     for i in range(1, number_instances + 1):
         res_list = []

@@ -3,9 +3,8 @@ from data import collect_infos_from_instance
 from utils import calculate_distance_matrix, distance
 import matplotlib.pyplot as plt
 
-
 def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):  # clients without hub
-    emitted_value_only_car = 200  # g per 1km, found in recherche
+    emitted_value_only_car = 0.2  # kg per 1km, found in recherche
     dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
     co2_cost = 0
     means_transport = []
@@ -24,7 +23,7 @@ def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
                 co2_cost += car_co2 * load * dist[j] + emitted_value_only_car * 2 * dist[
                     j]  # emissions to client + both ways co2 for only car
                 total_load -= load  # reduce the remaining demand
-    return co2_cost / 1000, means_transport
+    return co2_cost, means_transport
 
 
 def get_costs_star_scenario_emptycar_weight(hub_coord, clients, demands, car_capacity, car_co2, empty_car_weight):
@@ -53,7 +52,6 @@ def get_costs_star_scenario_emptycar_weight(hub_coord, clients, demands, car_cap
                 total_costs += car_co2 * empty_car_weight * dist_matrix[i][hub_id]  # emissions to return to depot
                 total_load -= load  # reduce the remaining demand
             means_transport.append(1)
-    total_costs = total_costs / 1000
     return total_costs, means_transport
 
 
@@ -118,9 +116,9 @@ def plot_routes(depot, clients, means_transport, save_path=None):
 
 if __name__ == "__main__":
     number_instances = 12
-    car_co2 = 0.772  # g per 1km for 1kg
-    car_capacity = 1500
-    bike_capacity = 100
+    car_co2 = 0.000772  # kg per 1km for 1kg
+    car_capacity = 1500  # 1,5t per car
+    bike_capacity = 100  # 100kg per bike
     empty_car_weight = 15000  # 1,5t per car
     emissions_per_instance = []
     for i in range(1, number_instances + 1):

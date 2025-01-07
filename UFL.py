@@ -38,7 +38,7 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
             nb_client_candidat_copy[id] -= 1
 
             # add the cost of freezing the demands of the clients assigned to the new candidate for one day
-    saving_candidat += demands_candidat * 0.042/1000
+    saving_candidat += demands_candidat * 0.000042  # in kg CO₂ for freezing 1 kg
 
     if min(elt for elt in nb_client_candidat_copy if elt > 0) > min_assigned_clients and saving_candidat < 0:
         # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
@@ -111,6 +111,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
     client_assignments_idx = [index(clients_assignments[elem], candidates) for elem in range(len(clients_assignments))]
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
+
 def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assigned_clients):
     hubs_per_group = 50
     selected_points, groups = split_and_select(clients_in_group, hubs_per_group)
@@ -122,7 +123,8 @@ def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assi
         clients_in_group = [depot] + groups[i]  # Ajouter 'depot' au début de la liste correspondante
         candidates_in_group = selected_points[i]  # random sample of candidates
         dist_matrix_group = distance_matrix(clients_in_group, candidates_in_group)
-        cost_client_car_bike_group = get_costs_car_bike(clients_in_group, candidates_in_group, demands, capacity, dist_matrix_group)
+        cost_client_car_bike_group = get_costs_car_bike(clients_in_group, candidates_in_group, demands, capacity,
+                                                        dist_matrix_group)
         total_cost[i - 1], candidates_open[i - 1], clients_assignments[i - 1], client_assignments_idx[
             i - 1] = greedy_heuristic_with_demand(
             candidates_in_group, clients_in_group, demands, cost_client_car_bike_group, min_assigned_clients)
@@ -130,11 +132,15 @@ def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assi
     clients_all = groups[1] + groups[2] + groups[3] + groups[4]
     warehouses = [depot] + selected_points[1] + selected_points[2] + selected_points[3] + selected_points[4]
     candidates_open_all = candidates_open[0] + candidates_open[1] + candidates_open[2] + candidates_open[3]
-    clients_assignments_all = clients_assignments[0][1:] + clients_assignments[1][1:] + clients_assignments[2][1:] + clients_assignments[
-        3][1:]
-    client_assignments_idx_all = client_assignments_idx[0][1:] + client_assignments_idx[1][1:] + client_assignments_idx[2][1:] + \
-                              client_assignments_idx[3][1:]
-    return sum(total_cost), candidates_open_all, clients_assignments_all, client_assignments_idx_all, clients_all, warehouses
+    clients_assignments_all = clients_assignments[0][1:] + clients_assignments[1][1:] + clients_assignments[2][1:] + \
+                              clients_assignments[
+                                  3][1:]
+    client_assignments_idx_all = client_assignments_idx[0][1:] + client_assignments_idx[1][1:] + client_assignments_idx[
+                                                                                                     2][1:] + \
+                                 client_assignments_idx[3][1:]
+    return sum(
+        total_cost), candidates_open_all, clients_assignments_all, client_assignments_idx_all, clients_all, warehouses
+
 
 def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
     """
@@ -175,12 +181,12 @@ def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
 
 
 if __name__ == "__main__":
-    car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
-    car_capacity = 1500
-    bike_capacity = 100
+    car_co2 = 0.000772  # kg per 1km for 1t -> g per 1km for 1kg
+    car_capacity = 1500  # in kg
+    bike_capacity = 100  # in kg
     empty_car_weight = 15000  # in kg
-    truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
-    empty_truck_weight = 30000  # 3t per truck
+    truck_co2 = 0.000311  # kg per 1km for 1t -> g per km per kg
+    empty_truck_weight = 30000  # in kg, 3t per truck
     min_assigned_clients = 5  # Minimum number of clients to assign to a candidate
     # Loop through instances "01" to "10"
     for i in range(1, 11):
@@ -213,7 +219,8 @@ if __name__ == "__main__":
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(
             instance)
 
-        total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(depot,
+        total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(
+            depot,
             clients, demands, capacity, 5)
         print("total cost", total_cost)
         plot_clients_refrigerator(clients, warehouses,

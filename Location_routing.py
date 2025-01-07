@@ -92,14 +92,17 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
     else:
         plt.show()
 
+
 if __name__ == '__main__':
     number_instances = 12
-    car_co2 = 0.772  # g per 1km for 1t -> g per 1km for 1kg
+    car_co2 = 0.000772  # kg per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
     bike_capacity = 100
     empty_car_weight = 15000  # in kg
-    truck_co2 = 311 / 1000  # g per 1km for 1t -> g per km per kg
+    truck_co2 = 0.000311  # kg per 1km for 1t -> g per km per kg
     empty_truck_weight = 30000  # 3t per truck
+    empty_truck_co2 = 0.903  # 0.903kg per km
+    emitted_value_only_car = 0.2  # kg per 1km, found in recherche
     costs_of_instances = []
     min_assigned_clients = [2, 5, 10, 20, 50, 100]
 
@@ -122,7 +125,8 @@ if __name__ == '__main__':
             hub = vertices[0]
             clients = vertices[1:]
             demands_only_candidates = demands[1:]
-            cost_client_car_bike = get_costs_car_bike(clients, candidates, demands_only_candidates, capacity, dist_matrix)
+            cost_client_car_bike = get_costs_car_bike(clients, candidates, demands_only_candidates, capacity,
+                                                      dist_matrix)
             if i < 11:
                 total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
                     candidates, clients, demands_only_candidates, cost_client_car_bike, min_clients)
@@ -138,9 +142,11 @@ if __name__ == '__main__':
             clusters = []
             hub_ids = [idx for idx, value in enumerate(open_candidates) if value == 1]
             cluster_transport_list = []
+            print("number of hubs: ", len(hub_ids))
             for hub in hub_ids:
                 transport_list = []
-                client_in_cluster = [idx for idx, value in enumerate(client_assignments_idx) if hub == value]  # 0 -> first client in clients list
+                client_in_cluster = [idx for idx, value in enumerate(client_assignments_idx) if
+                                     hub == value]  # 0 -> first client in clients list
                 clusters.append(client_in_cluster)
                 total_demand = demands[hub]  # need this for scenario 2 as demands of each hub + hub itself
                 total_demand_list = []
@@ -154,27 +160,29 @@ if __name__ == '__main__':
                     costs_of_cluster.append(0.0)
                     continue
                 total_cost_of_cluster, transport_list = get_costs_star_scenario(candidates[hub],
-                                                                                                   coord_of_client,  # without hub
-                                                                                                   total_demand_list,  # without hub
-                                                                                                   car_capacity, car_co2)
+                                                                                coord_of_client,  # without hub
+                                                                                total_demand_list,  # without hub
+                                                                                car_capacity, car_co2)
                 cluster_transport_list.append(transport_list)
                 costs_of_cluster.append(total_cost_of_cluster)
             # scenario 2_ routing through hubs
             coord_of_hubs = [candidates[idx] for idx in hub_ids]
-            #route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
-                                                 #truck_co2,
-                                                 #empty_truck_weight, True)
+            # route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
+            # truck_co2,
+            # empty_truck_co2, True)
             dist_matrix_2 = calculate_distance_matrix(coord_of_hubs)
             route, tour_costs = clarke_and_wright(dist_matrix_2, demands_of_cluster, capacity,
-                                                 truck_co2,
-                                                 empty_truck_weight, coord_of_hubs)
+                                                  truck_co2,
+                                                  empty_truck_co2, coord_of_hubs)
             summed_costs = 0
             for cluster_costs in costs_of_cluster:
                 summed_costs += cluster_costs
             summed_costs += tour_costs
             print(round(summed_costs, 3))
             costs_for_parameter.append(summed_costs)
-            plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route, "results/" + instance + "_3_combined_with_minclients_cw" + str(min_clients) + ".png")
+            plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route,
+                                           "results/" + instance + "_3_combined_with_minclients_cw" + str(
+                                               min_clients) + ".png")
         costs_of_instances.append(costs_for_parameter)
     dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
     capacity_list = [10000, 10000, 10000, 10000, 16000, 12000, 14090, 18420, 20430, 12970, 10000,
