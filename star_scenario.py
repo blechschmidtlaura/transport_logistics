@@ -118,7 +118,7 @@ def plot_routes(depot, clients, means_transport, save_path=None):
 
 if __name__ == "__main__":
     number_instances = 12
-    car_co2 = 0.772  # kg per 1km for 1t
+    car_co2 = 0.772  # g per 1km for 1kg
     car_capacity = 1500
     bike_capacity = 100
     empty_car_weight = 15000  # 1,5t per car
