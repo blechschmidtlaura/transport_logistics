@@ -12,7 +12,7 @@ def index(elt, list):
 
 
 def best_distribution(candidate, candidates, clients, demands, assignments, nb_client_candidate, cost_client_car_bike,
-                      min_assigned_clients):
+                      min_assigned_clients, refrigerator_freezing_costs):
     # Create copies of the current assignments and client counts for modification
     nb_client_candidat_copy = nb_client_candidate.copy()
     assignmentclients_candidate = assignments.copy()
@@ -38,7 +38,7 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
             nb_client_candidat_copy[id] -= 1
 
             # add the cost of freezing the demands of the clients assigned to the new candidate for one day
-    saving_candidat += demands_candidat * 0.000042  # in kg CO₂ for freezing 1 kg
+    saving_candidat += demands_candidat * refrigerator_freezing_costs  # in kg CO₂ for freezing 1 kg
 
     if min(elt for elt in nb_client_candidat_copy if elt > 0) > min_assigned_clients and saving_candidat < 0:
         # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
@@ -49,7 +49,7 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
         return 0, assignments, nb_client_candidate
 
 
-def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike, min_assigned_clients):
+def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_bike, min_assigned_clients, refrigerator_freezing_costs):
     nb_clients = len(clients)
     # Initially, all clients are assigned to the first candidate, which represents the main depot
     clients_assignments = [candidates[0]] * nb_clients
@@ -82,7 +82,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
             saving_cost[cand_temp], clients_assignment_matrix[cand_temp], nb_client_candidate_matrix[
                 cand_temp] = best_distribution(
                 candidates_temporary[cand_temp], candidates, clients, demands, clients_assignment_matrix[cand_temp],
-                nb_client_candidate_matrix[cand_temp], cost_client_car_bike, min_assigned_clients)
+                nb_client_candidate_matrix[cand_temp], cost_client_car_bike, min_assigned_clients, refrigerator_freezing_costs)
 
             # Find the candidate with the best saving cost
         smallest_saving_cost = min(saving_cost)
@@ -112,7 +112,7 @@ def greedy_heuristic_with_demand(candidates, clients, demands, cost_client_car_b
     return total_cost, candidates_open, clients_assignments, client_assignments_idx
 
 
-def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assigned_clients):
+def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assigned_clients, refrigerator_freezing_costs):
     hubs_per_group = 50
     selected_points, groups = split_and_select(clients_in_group, hubs_per_group)
     total_cost = [0, 0, 0, 0]
@@ -127,7 +127,7 @@ def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assi
                                                         dist_matrix_group)
         total_cost[i - 1], candidates_open[i - 1], clients_assignments[i - 1], client_assignments_idx[
             i - 1] = greedy_heuristic_with_demand(
-            candidates_in_group, clients_in_group, demands, cost_client_car_bike_group, min_assigned_clients)
+            candidates_in_group, clients_in_group, demands, cost_client_car_bike_group, min_assigned_clients, refrigerator_freezing_costs)
 
     clients_all = groups[1] + groups[2] + groups[3] + groups[4]
     warehouses = [depot] + selected_points[1] + selected_points[2] + selected_points[3] + selected_points[4]
@@ -188,6 +188,7 @@ if __name__ == "__main__":
     truck_co2 = 0.000311  # kg per 1km for 1t -> g per km per kg
     empty_truck_weight = 30000  # in kg, 3t per truck
     min_assigned_clients = 5  # Minimum number of clients to assign to a candidate
+    refrigerator_freezing_costs = 0.000042  # in kg CO₂ for freezing 1 kg
     # Loop through instances "01" to "10"
     for i in range(1, 11):
         instance = ""
@@ -209,7 +210,7 @@ if __name__ == "__main__":
         cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
         # Apply the greedy heuristic algorithm with demand
         total_cost, candidates_open, clients_assignments, client_assignments_idx = greedy_heuristic_with_demand(
-            candidates, clients, demands, cost_client_car_bike, min_assigned_clients)
+            candidates, clients, demands, cost_client_car_bike, min_assigned_clients, refrigerator_freezing_costs)
         print("total cost:", total_cost)
         print("initial cost:", sum(cost_client_car_bike[0][j] for j in range(len(clients))))
 
@@ -221,7 +222,7 @@ if __name__ == "__main__":
 
         total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(
             depot,
-            clients, demands, capacity, 5)
+            clients, demands, capacity, 5, refrigerator_freezing_costs)
         print("total cost", total_cost)
         plot_clients_refrigerator(clients, warehouses,
                                   clients_assignments[0] + clients_assignments[1] + clients_assignments[2] +

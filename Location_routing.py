@@ -1,5 +1,5 @@
 from data import collect_infos_from_instance, plot_emissions_per_instance
-from star_scenario import get_costs_star_scenario_emptycar_weight, get_costs_star_scenario
+from star_scenario import get_costs_star_scenario
 from UFL import heuristic_big_instances, greedy_heuristic_with_demand
 from tour_routing import nearest_neighbor, clarke_and_wright
 from utils import get_costs_car_bike, prepare_clients_to_plot, calculate_distance_matrix
@@ -103,6 +103,7 @@ if __name__ == '__main__':
     empty_truck_weight = 30000  # 3t per truck
     empty_truck_co2 = 0.903  # 0.903kg per km
     emitted_value_only_car = 0.2  # kg per 1km, found in recherche
+    refrigerator_freezing_costs = 0.000042  # kg for 1kg
     costs_of_instances = []
     min_assigned_clients = [2, 5, 10, 20, 50, 100]
 
@@ -129,10 +130,11 @@ if __name__ == '__main__':
                                                       dist_matrix)
             if i < 11:
                 total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
-                    candidates, clients, demands_only_candidates, cost_client_car_bike, min_clients)
+                    candidates, clients, demands_only_candidates, cost_client_car_bike, min_clients, refrigerator_freezing_costs)
             else:
                 total_cost, open_candidates, client_assign, client_assignments_idx, clients, warehouses = heuristic_big_instances(
-                    hub, clients, demands_only_candidates, capacity, min_clients)
+                    hub, clients, demands_only_candidates, capacity, min_clients, refrigerator_freezing_costs)
+            print("total cost: ", round(total_cost, 3))
             # open_candidates: [0,1,0,1,..], 1=hub
             # client_assignments_idx: [in cluster of hub idx, in cluster of hub idx, ...]
             # scenario 1: calculate demands of each hub: sum of all demands in cluster
@@ -162,26 +164,27 @@ if __name__ == '__main__':
                 total_cost_of_cluster, transport_list = get_costs_star_scenario(candidates[hub],
                                                                                 coord_of_client,  # without hub
                                                                                 total_demand_list,  # without hub
-                                                                                car_capacity, car_co2)
+                                                                                car_capacity, car_co2, refrigerator_freezing_costs)
                 cluster_transport_list.append(transport_list)
                 costs_of_cluster.append(total_cost_of_cluster)
             # scenario 2_ routing through hubs
             coord_of_hubs = [candidates[idx] for idx in hub_ids]
-            # route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
-            # truck_co2,
-            # empty_truck_co2, True)
-            dist_matrix_2 = calculate_distance_matrix(coord_of_hubs)
-            route, tour_costs = clarke_and_wright(dist_matrix_2, demands_of_cluster, capacity,
-                                                  truck_co2,
-                                                  empty_truck_co2, coord_of_hubs)
+            route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
+            truck_co2,
+            empty_truck_co2, True)
+            #dist_matrix_2 = calculate_distance_matrix(coord_of_hubs)
+            #route, tour_costs = clarke_and_wright(dist_matrix_2, demands_of_cluster, capacity,
+             #                                     truck_co2,
+              #                                    empty_truck_co2, coord_of_hubs)
             summed_costs = 0
             for cluster_costs in costs_of_cluster:
                 summed_costs += cluster_costs
+            print("costs of clusters: ", summed_costs)
             summed_costs += tour_costs
             print(round(summed_costs, 3))
             costs_for_parameter.append(summed_costs)
             plot_combined_routes_and_tours(hub_ids, clusters, cluster_transport_list, candidates, route,
-                                           "results/" + instance + "_3_combined_with_minclients_cw" + str(
+                                           "results/" + instance + "_3_refrcosts_with_minclients_sweep" + str(
                                                min_clients) + ".png")
         costs_of_instances.append(costs_for_parameter)
     dimension_list = [32, 60, 31, 50, 19, 60, 101, 101, 101, 101, 3001, 4001]  # number of nodes of each instance
@@ -191,4 +194,4 @@ if __name__ == '__main__':
     print(emissions_by_version)
     parameter_settings = min_assigned_clients  # how many clients one hub serves at least
     plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings,
-                                "results/emissions_3_assigned_clients_cw.png")
+                                "results/emissions_3_refrcosts_assigned_clients_sweep.png")

@@ -3,7 +3,7 @@ from data import collect_infos_from_instance
 from utils import calculate_distance_matrix, distance
 import matplotlib.pyplot as plt
 
-def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):  # clients without hub
+def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2, refrigerator):  # clients without hub
     emitted_value_only_car = 0.2  # kg per 1km, found in recherche
     dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
     co2_cost = 0
@@ -20,6 +20,8 @@ def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
             while total_load > 0:
                 load = min(demands[j],
                            car_capacity)  # if the truck can not carry all demands -> multiple routes to the same client
+                if refrigerator != None:
+                    co2_cost += load * refrigerator  # load has to be frozen during the transport in scenario 3
                 co2_cost += car_co2 * load * dist[j] + emitted_value_only_car * 2 * dist[
                     j]  # emissions to client + both ways co2 for only car
                 total_load -= load  # reduce the remaining demand
@@ -127,7 +129,7 @@ if __name__ == "__main__":
             instance += "0"
         instance += str(i)
         dimension, capacity, indices, clients, demands = collect_infos_from_instance(instance)  # prepare instance
-        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2)
+        costs, mean_transport = get_costs_star_scenario(clients[0], clients[1:], demands[1:], car_capacity, car_co2, None)
         print(str(i) + ":")
         print(round(costs, 3))
         plot_routes(clients[0], clients[1:], mean_transport, save_path=f"results/star_scenario_{instance}.png")
