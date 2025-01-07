@@ -4,7 +4,7 @@ from utils import calculate_distance_matrix, distance
 import matplotlib.pyplot as plt
 
 
-def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):
+def get_costs_star_scenario(hub_coord, clients, demands, car_capacity, car_co2):  # clients without hub
     emitted_value_only_car = 200  # g per 1km, found in recherche
     dist = [distance(hub_coord, clients[j]) for j in range(len(clients))]
     co2_cost = 0

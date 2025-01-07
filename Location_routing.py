@@ -94,7 +94,7 @@ def plot_combined_routes_and_tours(depot: Tuple[float, float],
 
 if __name__ == '__main__':
     number_instances = 12
-    car_co2 = 772 / 1000  # g per 1km for 1t -> g per 1km for 1kg
+    car_co2 = 0.772  # g per 1km for 1t -> g per 1km for 1kg
     car_capacity = 1500
     bike_capacity = 100
     empty_car_weight = 15000  # in kg
@@ -121,17 +121,16 @@ if __name__ == '__main__':
             candidates = vertices  # clients + hub
             hub = vertices[0]
             clients = vertices[1:]
-            demands = demands[1:]
-            cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
+            demands_only_candidates = demands[1:]
+            cost_client_car_bike = get_costs_car_bike(clients, candidates, demands_only_candidates, capacity, dist_matrix)
             if i < 11:
                 total_cost, open_candidates, client_assign, client_assignments_idx = greedy_heuristic_with_demand(
-                    candidates, clients, demands, cost_client_car_bike, min_clients)
+                    candidates, clients, demands_only_candidates, cost_client_car_bike, min_clients)
             else:
                 total_cost, open_candidates, client_assign, client_assignments_idx, clients, warehouses = heuristic_big_instances(
-                    hub, clients, demands, capacity, min_clients)
+                    hub, clients, demands_only_candidates, capacity, min_clients)
             # open_candidates: [0,1,0,1,..], 1=hub
             # client_assignments_idx: [in cluster of hub idx, in cluster of hub idx, ...]
-
             # scenario 1: calculate demands of each hub: sum of all demands in cluster
             demands_of_cluster = []
             demands_of_cluster_as_list = []
@@ -141,22 +140,23 @@ if __name__ == '__main__':
             cluster_transport_list = []
             for hub in hub_ids:
                 transport_list = []
-                client_in_cluster = [idx for idx, value in enumerate(client_assignments_idx) if hub == value]
+                client_in_cluster = [idx for idx, value in enumerate(client_assignments_idx) if hub == value]  # 0 -> first client in clients list
                 clusters.append(client_in_cluster)
                 total_demand = demands[hub]  # need this for scenario 2 as demands of each hub + hub itself
                 total_demand_list = []
                 for client in client_in_cluster:
-                    total_demand += demands[client]
-                    total_demand_list.append(demands[client])
+                    total_demand += demands[client + 1]  # skip hub with 1
+                    total_demand_list.append(demands[client + 1])
                 demands_of_cluster.append(total_demand)
                 demands_of_cluster_as_list.append(total_demand_list)
                 coord_of_client = [clients[idx] for idx in client_in_cluster]
-                if len(coord_of_client) <= 1:  # no costs at all
+                if len(coord_of_client) <= 0:  # no costs at all, because only hub
                     costs_of_cluster.append(0.0)
                     continue
-                total_cost_of_cluster, transport_list = get_costs_star_scenario(clients[hub], coord_of_client,
-                                                                                total_demand_list, car_capacity,
-                                                                                car_co2)
+                total_cost_of_cluster, transport_list = get_costs_star_scenario(candidates[hub],
+                                                                                                   coord_of_client,  # without hub
+                                                                                                   total_demand_list,  # without hub
+                                                                                                   car_capacity, car_co2)
                 cluster_transport_list.append(transport_list)
                 costs_of_cluster.append(total_cost_of_cluster)
             # scenario 2_ routing through hubs
