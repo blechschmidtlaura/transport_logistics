@@ -38,11 +38,11 @@ def best_distribution(candidate, candidates, clients, demands, assignments, nb_c
             nb_client_candidat_copy[id] -= 1
 
             # add the cost of freezing the demands of the clients assigned to the new candidate for one day
-    saving_candidat += demands_candidat * 0.042
+    saving_candidat += demands_candidat * 0.042/1000
 
     if min(elt for elt in nb_client_candidat_copy if elt > 0) > min_assigned_clients and saving_candidat < 0:
         # We assign clients to the new candidate, if we ensure savings from opening the candidate, and assign more
-        # than 5 clients to this candidate.
+        # than  min_assigned_clients to this candidate.
         return saving_candidat, assignmentclients_candidate, nb_client_candidat_copy
     else:
         # We don't open the candidate and we have null saving
@@ -134,7 +134,7 @@ def heuristic_big_instances(depot, clients_in_group, demands, capacity, min_assi
         3][1:]
     client_assignments_idx_all = client_assignments_idx[0][1:] + client_assignments_idx[1][1:] + client_assignments_idx[2][1:] + \
                               client_assignments_idx[3][1:]
-    return total_cost, candidates_open_all, clients_assignments_all, client_assignments_idx_all, clients_all, warehouses
+    return sum(total_cost), candidates_open_all, clients_assignments_all, client_assignments_idx_all, clients_all, warehouses
 
 def plot_clients_refrigerator(clients, warehouses, assignments, save_path=None):
     """
@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
         total_cost, candidates_open, clients_assignments, client_assignments_idx, clients, warehouses = heuristic_big_instances(depot,
             clients, demands, capacity, 5)
-        print("total cost", sum(total_cost))
+        print("total cost", total_cost)
         plot_clients_refrigerator(clients, warehouses,
                                   clients_assignments[0] + clients_assignments[1] + clients_assignments[2] +
                                   clients_assignments[3])
