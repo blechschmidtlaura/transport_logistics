@@ -122,6 +122,6 @@ def get_costs_car_bike(clients, candidats, demands, capacity, dist_matrix):
                 while total_load > 0:
                     load = min(demands[j],
                                capacity)  # if the truck can not carry all demands -> multiple routes to the same client
-                    co2_cost[i][j] += co2_car_emission * load * dist_matrix[i][j] + 0.2 * 2 * dist_matrix[i][j]
+                    co2_cost[i][j] += co2_car_emission * load * dist_matrix[i][j]/1000 + 0.2 * 2 * dist_matrix[i][j]
                     total_load -= load  # reeduce the remaining demand
     return co2_cost
