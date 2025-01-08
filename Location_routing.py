@@ -103,7 +103,6 @@ if __name__ == '__main__':
     empty_truck_weight = 30000  # 3t per truck
     empty_truck_co2 = 0.903  # 0.903kg per km
     emitted_value_only_car = 0.2  # kg per 1km, found in recherche
-    refrigerator_freezing_costs = 0.000042  # kg for 1kg
     costs_of_instances = []
     min_assigned_clients = [2, 5, 10, 20, 50, 100]
 
@@ -115,6 +114,7 @@ if __name__ == '__main__':
         print(instance + ": ")
         costs_for_parameter = []
         for min_clients in min_assigned_clients:
+            refrigerator_freezing_costs = 0.000042  # kg for 1kg
             dimension, capacity, indices, vertices, demands = collect_infos_from_instance(
                 instance)  # prepare instance# vertices without routes
             if min_clients > dimension:
@@ -143,6 +143,8 @@ if __name__ == '__main__':
             costs_of_cluster = []
             clusters = []
             hub_ids = [idx for idx, value in enumerate(open_candidates) if value == 1]
+            if len(hub_ids) == 1:
+                refrigerator_freezing_costs = None  # no installed refrigerators
             cluster_transport_list = []
             print("number of hubs: ", len(hub_ids))
             for hub in hub_ids:
@@ -169,13 +171,13 @@ if __name__ == '__main__':
                 costs_of_cluster.append(total_cost_of_cluster)
             # scenario 2_ routing through hubs
             coord_of_hubs = [candidates[idx] for idx in hub_ids]
-            route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
-            truck_co2,
-            empty_truck_co2, True)
-            #dist_matrix_2 = calculate_distance_matrix(coord_of_hubs)
-            #route, tour_costs = clarke_and_wright(dist_matrix_2, demands_of_cluster, capacity,
-             #                                     truck_co2,
-              #                                    empty_truck_co2, coord_of_hubs)
+            #route, tour_costs = nearest_neighbor(coord_of_hubs[0], coord_of_hubs, demands_of_cluster, capacity,
+            #truck_co2,
+            #empty_truck_co2, True)
+            dist_matrix_2 = calculate_distance_matrix(coord_of_hubs)
+            route, tour_costs = clarke_and_wright(dist_matrix_2, demands_of_cluster, capacity,
+                                                  truck_co2,
+                                                  empty_truck_co2, coord_of_hubs)
             summed_costs = 0
             for cluster_costs in costs_of_cluster:
                 summed_costs += cluster_costs
@@ -194,4 +196,4 @@ if __name__ == '__main__':
     print(emissions_by_version)
     parameter_settings = min_assigned_clients  # how many clients one hub serves at least
     plot_emissions_per_instance(dimension_list, capacity_list, emissions_by_version, parameter_settings,
-                                "results/emissions_3_refrcosts_assigned_clients_sweep.png")
+                                "results/emissions_3_refrcosts_assigned_clients_cw.png")
