@@ -207,7 +207,7 @@ if __name__ == "__main__":
         # Compute the distance matrix
         dist_matrix = distance_matrix(clients, candidates)
         # Compute costs for car and bike transportation
-        cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, capacity, dist_matrix)
+        cost_client_car_bike = get_costs_car_bike(clients, candidates, demands, car_capacity, dist_matrix)
         # Apply the greedy heuristic algorithm with demand
         total_cost, candidates_open, clients_assignments, client_assignments_idx = greedy_heuristic_with_demand(
             candidates, clients, demands, cost_client_car_bike, min_assigned_clients, refrigerator_freezing_costs)
